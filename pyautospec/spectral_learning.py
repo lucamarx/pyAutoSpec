@@ -3,6 +3,7 @@ Implement spectral learning algorithm
 """
 import itertools
 import jax.numpy as jnp
+from typing import List
 from tqdm import tqdm
 from jax import jit
 
@@ -34,7 +35,7 @@ def pseudo_inverse(M):
 
 class SpectralLearning():
 
-    def __init__(self, alphabet : list[str], prefix_suffix_length : int):
+    def __init__(self, alphabet : List[str], prefix_suffix_length : int):
         """
         Initialize spectral learning with alphabet and prefix/suffix set
         """

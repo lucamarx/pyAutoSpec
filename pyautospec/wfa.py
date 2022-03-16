@@ -3,6 +3,7 @@ Weighted finite automaton implemented as a matrix product state
 """
 import graphviz
 import jax.numpy as jnp
+from typing import List
 from jax import jit
 
 
@@ -19,7 +20,7 @@ class Wfa:
     Weighted Finite Automaton (α, A, ω) over an alphabet Σ
     """
 
-    def __init__(self, alphabet : list[str], states : int):
+    def __init__(self, alphabet : List[str], states : int):
         """
         Initialize a WFA with given alphabet and number of states
         """
