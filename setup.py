@@ -3,7 +3,7 @@ pyAutoSpec module setup
 """
 from setuptools import setup
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 
 setup(
     name="pyAutoSpec",
@@ -32,6 +32,7 @@ setup(
     install_requires=[
         "graphviz>=0.19.0",
         "tqdm>=4.62.0",
+        "jaxlib>=0.3.0",
         "jax>=0.3.0",
     ],
     # extras_require={
