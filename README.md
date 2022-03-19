@@ -36,6 +36,4 @@ learner = SpectralLearning(alphabet, 3)
 automaton = learner.learn(f)
 ```
 
-see the [Automata
-Learning](https://github.com/lucamarx/pyAutoSpec/blob/main/examples/Automata
-Learning.ipynb) example.
+see the [Automata Learning](https://github.com/lucamarx/pyAutoSpec/blob/main/examples/Automata Learning.ipynb) example.
