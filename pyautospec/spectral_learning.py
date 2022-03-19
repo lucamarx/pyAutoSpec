@@ -4,7 +4,7 @@ Implement spectral learning algorithm
 import itertools
 import jax.numpy as jnp
 from typing import List
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from jax import jit
 
 from .wfa import Wfa
