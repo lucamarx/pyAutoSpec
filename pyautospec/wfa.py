@@ -38,6 +38,7 @@ def path_weight(alpha, A, omega, X, path):
 
 def word_paths(alpha, A, omega, X, threshold):
     """
+    Enumerate all paths contributing to final weight
     """
     paths = jnp.array(list(itertools.product(*([range(0, alpha.shape[0])] * (1 + len(X))))), dtype=jnp.int32)
     weights = vmap(lambda p: path_weight(alpha, A, omega, X, p), in_axes=0)(paths)
