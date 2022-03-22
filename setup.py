@@ -3,7 +3,7 @@ pyAutoSpec module setup
 """
 from setuptools import setup
 
-VERSION = "0.3.2"
+VERSION = "0.3.12"
 
 setup(
     name="pyAutoSpec",
@@ -30,6 +30,7 @@ setup(
     python_requires=">=3.8",
 
     install_requires=[
+        "matplotlib>=3.3.4",
         "graphviz>=0.19.0",
         "tqdm>=4.62.0",
         "jaxlib>=0.3.0",
