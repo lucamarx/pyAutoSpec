@@ -81,10 +81,12 @@ class SpectralLearning():
         u, s, v = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
 
         # truncate expansion
-        # rank = jnp.argmin(jnp.abs(s) > 1e-5).item()
         rank = jnp.linalg.matrix_rank(H)
+        u, s, v = u[:,0:rank], s[0:rank], v[0:rank,:]
+        s_sqrt = jnp.sqrt(s)
 
-        P, S = jnp.einsum("ij,j->ij", u[:,0:rank], s[0:rank]), v[0:rank,:]
+        P = jnp.einsum("ij,j->ij", u, s_sqrt)
+        S = jnp.einsum("i,ij->ij", s_sqrt, v)
 
         # compute pseudo inverses
         Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
