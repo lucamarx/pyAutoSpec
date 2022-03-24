@@ -2,6 +2,7 @@
 Implement spectral learning algorithm
 """
 import itertools
+import numpy as np
 import jax.numpy as jnp
 from typing import List
 from tqdm.auto import tqdm
@@ -56,19 +57,25 @@ class SpectralLearning():
         d = len(self.prefix_index)
         a = len(self.alphabet_index)
 
-        h  = jnp.zeros((d,), dtype=jnp.float32)
-        H  = jnp.zeros((d,d), dtype=jnp.float32)
-        Hs = jnp.zeros((d,a,d), dtype=jnp.float32)
+        # here we use numpy arrays because they are faster to update in place
+        h  = np.zeros((d,), dtype=np.float32)
+        H  = np.zeros((d,d), dtype=np.float32)
+        Hs = np.zeros((d,a,d), dtype=np.float32)
 
         # compute Hankel blocks
         for (u, u_i) in tqdm(self.prefix_index.items()):
-            h = h.at[u_i].set(f(u))
+            h[u_i] = f(u)
 
             for (v, v_i) in self.prefix_index.items():
-                H = H.at[u_i, v_i].set(f(u + v))
+                H[u_i, v_i] = f(u + v)
 
                 for (a, a_i) in self.alphabet_index.items():
-                    Hs = Hs.at[u_i, a_i, v_i].set(f(u + a + v))
+                    Hs[u_i, a_i, v_i] = f(u + a + v)
+
+        # convert to jax arrays
+        h  = jnp.array(h)
+        H  = jnp.array(H)
+        Hs = jnp.array(Hs)
 
         # compute full-rank factorization H = P·S
         u, s, v = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
