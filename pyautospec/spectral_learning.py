@@ -42,7 +42,7 @@ class SpectralLearning():
         self.alphabet = alphabet
         self.alphabet_index = {alphabet[i]: i for i in range(0, len(alphabet))}
 
-        prefix_suffix_set = []
+        prefix_suffix_set = [""]
         for l in range(1, prefix_suffix_length+1):
             prefix_suffix_set.extend([''.join(w) for w in itertools.product(*([alphabet] * l))])
 
