@@ -30,6 +30,7 @@ setup(
     python_requires=">=3.8",
 
     install_requires=[
+        "scikit-image>=0.19.2",
         "matplotlib>=3.3.4",
         "graphviz>=0.19.0",
         "tqdm>=4.62.0",
