@@ -78,15 +78,15 @@ class SpectralLearning():
         Hs = jnp.array(Hs)
 
         # compute full-rank factorization H = P·S
-        u, s, v = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
+        U, D, V = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
 
         # truncate expansion
         rank = jnp.linalg.matrix_rank(H)
-        u, s, v = u[:,0:rank], s[0:rank], v[0:rank,:]
-        s_sqrt = jnp.sqrt(s)
+        U, D, V = U[:,0:rank], D[0:rank], V[0:rank,:]
+        D_sqrt = jnp.sqrt(D)
 
-        P = jnp.einsum("ij,j->ij", u, s_sqrt)
-        S = jnp.einsum("i,ij->ij", s_sqrt, v)
+        P = jnp.einsum("ij,j->ij", U, D_sqrt)
+        S = jnp.einsum("i,ij->ij", D_sqrt, V)
 
         # compute pseudo inverses
         Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
