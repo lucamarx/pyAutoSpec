@@ -2,9 +2,26 @@ pyAutoSpec
 ==========
 
 pyAutoSpec is a simple library for demonstrating the **spectral learning
-algorithm** detailed in the 2013 paper [Spectral learning of weighted
+algorithm** detailed in the 2014 paper [Spectral learning of weighted
 automata](https://www.cs.upc.edu/~aquattoni/AllMyPapers/mlj_2014.pdf) by Borja
 Balle, Xavier Carreras, Franco M. Luque and Ariadna Quattoni.
+
+You can find an introduction on my
+[blog](https://lucamarx.com/blog/2022/0323-spectral_learning/).
+
+Disclaimer
+----------
+
+This is a **toy** implementation of spectral learning:
+
+- it is not optimized
+- it is not thoroughly tested
+- it is as simple as possible
+
+**DO NOT USE IN PRODUCTION**
+
+If you need spectral learning in your application use
+[scikit-splearn](https://pypi.org/project/scikit-splearn/) instead.
 
 Installation
 ------------
