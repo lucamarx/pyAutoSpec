@@ -37,7 +37,7 @@ def get_image(image, w : str):
 
 class ImageWfa():
 
-    def __init__(self, image):
+    def __init__(self, image : np.ndarray, learn_resolution : int = 3):
         """
         Intialize image model
         """
@@ -58,17 +58,15 @@ class ImageWfa():
             image = image[:, (h-w) // 2 : w + (h-w) // 2]
 
         self.image = image / np.max(image)
+        self.splrn = SpectralLearning(["a", "b", "c", "d"], learn_resolution)
+        self.model = self.splrn.learn(lambda w: get_image(self.image, w))
 
 
-    def learn(self, resolution=4):
-        """
-        Learn a model of the image
-        """
-        sl = SpectralLearning(["a", "b", "c", "d"], resolution)
-        self.model = sl.learn(lambda w: get_image(self.image, w))
+    def __repr__(self):
+        return "WFA(states={}) {}x{}".format(len(self.model), self.image.shape[0], self.image.shape[1])
 
 
-    def reconstruct(self, resolution=5):
+    def reconstruct(self, resolution : int = 5):
         """
         Reconstruct the image
         """
