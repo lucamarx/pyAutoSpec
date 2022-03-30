@@ -68,6 +68,10 @@ class Wfa:
         self.omega    = jnp.zeros((states,), dtype=jnp.float32)
 
 
+    def __repr__(self):
+        return "WFA(states=)".format(len(self))
+
+
     def __len__(self):
         """
         The length is just the number of states
@@ -82,7 +86,7 @@ class Wfa:
         self.alpha = self.alpha.at[p].set(w)
 
 
-    def add_transition(self, p : int , l : str, w : float, q : int):
+    def add_transition(self, p : int, l : str, w : float, q : int):
         """
         Add transition p -l-> q with weight w
         """
@@ -96,7 +100,7 @@ class Wfa:
         self.omega = self.omega.at[p].set(w)
 
 
-    def __call__(self, X):
+    def __call__(self, X : List[str]) -> float:
         """
         Evaluate WFA over word X
         """
@@ -110,7 +114,7 @@ class Wfa:
         return evaluate(self.alpha, self.A, self.omega, [self.alphabet_map[a] for a in X]).item()
 
 
-    def diagram(self, title="WFA"):
+    def diagram(self, title : str = "WFA"):
         """
         Make diagram
         """
@@ -147,7 +151,7 @@ class Wfa:
         return dot
 
 
-    def transition_plot(self, X, threshold=1e-4):
+    def transition_plot(self, X : List[str], threshold : float = 1e-4):
         """
         Plot weight contributions
         """
