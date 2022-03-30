@@ -20,6 +20,31 @@ def decode(w : str, x0 = 0.0, x1 = 1.0):
     return decode(w[1:], x0, x1)
 
 
+def word2real(s : str, x0 : float = 0.0, x1 : float = 1.0):
+    """
+    Convert the binary representation s of xϵ[x0,x1] into the number itself
+    """
+    s = "0" + s
+    return x0 + sum([int(s[i]) * 2**(-i) for i in range(0,len(s))]) * (x1-x0)
+
+
+def real2word(r : float, l : int = 8, x0 : float = 0.0, x1 : float = 1.0):
+    """
+    Convert a real number xϵ[x0,x1] into its binary representation (with
+    maximum length l)
+    """
+    if r < x0 or r > x1:
+        raise Exception("out of bounds")
+
+    r = (r - x0) / (x1 - x0)
+    w = ""
+    for _ in range(0,l+1):
+        d = 1 if r >= 1 else 0
+        w += str(d)
+        r = (r-d)*2
+    return w[1:]
+
+
 class FunctionWfa():
     """
     Wfa based function model
