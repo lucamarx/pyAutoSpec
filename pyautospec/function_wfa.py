@@ -66,7 +66,7 @@ class FunctionWfa():
 
 
     def __repr__(self):
-        return "WFA {}: [{:.2f},{:.2f}] → R".format(self.f.__repr__(), self.x0, self.x1)
+        return "WFA(states={}) {}: [{:.2f},{:.2f}] → R".format(len(self.model), self.f.__repr__(), self.x0, self.x1)
 
 
     def w2r(self, w : str):
