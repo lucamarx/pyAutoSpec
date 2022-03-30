@@ -1,7 +1,9 @@
 """
 Wfa based function compression algorithm
 """
-import itertools
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+
 from .spectral_learning import SpectralLearning
 
 
@@ -81,8 +83,26 @@ class FunctionWfa():
         return real2word(r, x0=self.x0, x1=self.x1, l=l)
 
 
-    def __call__(self, x : float, resolution : int = 6):
+    def __call__(self, x : float, resolution : int = 64):
         """
         Evaluate learned function at x
         """
         return self.model(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
+
+
+    def comparison_chart(self, n_points : int = 50):
+        """
+        Compare the two functions
+        """
+        xs = jnp.linspace(self.x0, self.x1, num = n_points)
+
+        v0 = jnp.array([self.f(x) for x in xs])
+        v1 = jnp.array([self(x) for x in xs])
+
+        error = jnp.abs(v1 - v0)
+
+        plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), jnp.average(error), jnp.max(error)))
+
+        plt.plot(xs, v0, label="original")
+        plt.plot(xs, v1, label="reconstructed")
+        plt.legend()
