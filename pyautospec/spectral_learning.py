@@ -35,6 +35,14 @@ def pseudo_inverse(M):
 
 
 class SpectralLearning():
+    """
+    Spectral learning algorithm:
+
+    - generate a base made of words with maximum lenght
+    - build the Hankel matrix for the function f
+    - perform SVD factorization
+    - reconstruct the WFA
+    """
 
     def __init__(self, alphabet : List[str], prefix_suffix_length : int):
         """
@@ -43,6 +51,7 @@ class SpectralLearning():
         self.alphabet = alphabet
         self.alphabet_index = {alphabet[i]: i for i in range(0, len(alphabet))}
 
+        # the prefix/suffix set is made of words with a maximum length
         prefix_suffix_set = [""]
         for l in range(1, prefix_suffix_length+1):
             prefix_suffix_set.extend([''.join(w) for w in itertools.product(*([alphabet] * l))])
