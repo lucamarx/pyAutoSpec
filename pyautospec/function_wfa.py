@@ -62,19 +62,18 @@ class FunctionWfa():
         self.model = None
 
 
-    def decode(self, w : str):
+    def w2r(self, w : str):
         """
-        Decode a word into x
+        Convert binary representation to real number
         """
-        return decode(w, x0=self.x0, x1=self.x1)
+        return word2real(w, x0=self.x0, x1=self.x1)
 
 
-    def learn(self, resolution=4):
+    def r2w(self, r : float, l : int = 6):
         """
-        Learn model from the function f
+        Convert real number to its binary representation
         """
-        learn = SpectralLearning(["a", "b"], resolution)
-        self.model = learn.learn(lambda w: self.f(decode(w, x0=self.x0, x1=self.x1)))
+        return real2word(r, x0=self.x0, x1=self.x1, l=l)
 
 
     def reconstruct(self, resolution=4):
