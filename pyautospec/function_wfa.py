@@ -94,12 +94,14 @@ class FunctionWfa():
         """
         Compare the two functions
         """
-        xs = jnp.linspace(self.x0, self.x1, num = n_points)
+        xs = jnp.linspace(self.x0, self.x1, endpoint = False, num = n_points)
 
         v0 = jnp.array([self.f(x) for x in xs])
         v1 = jnp.array([self(x) for x in xs])
 
         error = jnp.abs(v1 - v0)
+
+        plt.figure()
 
         plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), jnp.average(error), jnp.max(error)))
 
