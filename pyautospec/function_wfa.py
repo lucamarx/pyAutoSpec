@@ -4,6 +4,7 @@ Wfa based function compression algorithm
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
+from .wfa import Wfa
 from .spectral_learning import SpectralLearning
 
 
@@ -47,6 +48,19 @@ def real2word(r : float, l : int = 8, x0 : float = 0.0, x1 : float = 1.0):
     return w[1:]
 
 
+def wfa_derivative(wfa, x0, x1):
+    """
+    Compute wfa's derivative
+    """
+    wfa_d = Wfa(["0", "1"], len(wfa))
+
+    wfa_d.alpha = wfa.alpha / (x1 - x0)
+    wfa_d.A     = 2 * wfa.A
+    wfa_d.omega = 2 * jnp.dot(wfa.A[:,1,:] - wfa.A[:,0,:], wfa.omega)
+
+    return wfa_d
+
+
 class FunctionWfa():
     """
     Wfa based real function model
@@ -63,6 +77,7 @@ class FunctionWfa():
 
         self.splrn = SpectralLearning(["0", "1"], learn_resolution)
         self.model = self.splrn.learn(lambda w: self.f(word2real(w, x0=x0, x1=x1)))
+        self.deriv = wfa_derivative(self.model, x0, x1)
 
 
     def __repr__(self):
@@ -83,21 +98,28 @@ class FunctionWfa():
         return real2word(r, x0=self.x0, x1=self.x1, l=l)
 
 
-    def __call__(self, x : float, resolution : int = 64):
+    def __call__(self, x : float, resolution : int = 12):
         """
         Evaluate learned function at x
         """
         return self.model(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
 
 
-    def comparison_chart(self, n_points : int = 50):
+    def prime(self, x : float, resolution : int = 12):
+        """
+        Evaluate derivative at x
+        """
+        return self.deriv(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
+
+
+    def comparison_chart(self, n_points : int = 50, resolution : int = 12, plot_derivative : bool = False):
         """
         Compare the two functions
         """
         xs = jnp.linspace(self.x0, self.x1, endpoint = False, num = n_points)
 
         v0 = jnp.array([self.f(x) for x in xs])
-        v1 = jnp.array([self(x) for x in xs])
+        v1 = jnp.array([self(x, resolution) for x in xs])
 
         error = jnp.abs(v1 - v0)
 
@@ -105,6 +127,11 @@ class FunctionWfa():
 
         plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), jnp.average(error), jnp.max(error)))
 
-        plt.plot(xs, v0, label="original")
-        plt.plot(xs, v1, label="reconstructed")
+        plt.plot(xs, v0, label="original f")
+        plt.plot(xs, v1, label="f")
+
+        if plot_derivative:
+            v2 = jnp.array([self.prime(x, resolution) for x in xs])
+            plt.plot(xs, v2, label="f'")
+
         plt.legend()
