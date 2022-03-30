@@ -157,7 +157,7 @@ class Wfa:
         """
         fig, host = plt.subplots(figsize=(12,4))
 
-        host.set_title("'{}' → {:.4f}".format(X, self.evaluate(X)), fontsize=18, pad=25)
+        host.set_title("'{}' → {:.4f}".format(X, self(X)), fontsize=18, pad=25)
         host.set_xlim(0, len(X))
         host.set_xticks([], labels=None)
 
