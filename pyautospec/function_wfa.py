@@ -47,19 +47,20 @@ def real2word(r : float, l : int = 8, x0 : float = 0.0, x1 : float = 1.0):
 
 class FunctionWfa():
     """
-    Wfa based function model
+    Wfa based real function model
     """
 
-    def __init__(self, f, x0 : float = 0.0, x1 : float = 1.0):
+    def __init__(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_resolution : int = 3):
         """
-        Intialize model
+        Intialize learn a model of a real function f: [x0,x1] → R
         """
         self.f = f
 
         self.x0 = x0
         self.x1 = x1
 
-        self.model = None
+        self.learn = SpectralLearning(["0", "1"], learn_resolution)
+        self.model = self.learn.learn(lambda w: self.f(word2real(w, x0=x0, x1=x1)))
 
 
     def w2r(self, w : str):
