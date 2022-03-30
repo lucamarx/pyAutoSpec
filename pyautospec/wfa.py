@@ -69,7 +69,7 @@ class Wfa:
 
 
     def __repr__(self):
-        return "WFA(states=)".format(len(self))
+        return "WFA(states={})".format(len(self))
 
 
     def __len__(self):
