@@ -77,17 +77,8 @@ class FunctionWfa():
         return real2word(r, x0=self.x0, x1=self.x1, l=l)
 
 
-    def reconstruct(self, resolution=4):
+    def __call__(self, x : float, resolution : int = 6):
         """
-        Reconstruct the function from the model
+        Evaluate learned function at x
         """
-        points, original, reconstr = [], [], []
-
-        for w in [''.join(w) for w in itertools.product(*([["a", "b"]] * resolution))]:
-            x = decode(w, x0=self.x0, x1=self.x1)
-
-            points.append(x)
-            original.append(self.f(x))
-            reconstr.append(self.model.evaluate(w))
-
-        return points, original, reconstr
+        return self.model(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
