@@ -59,8 +59,12 @@ class FunctionWfa():
         self.x0 = x0
         self.x1 = x1
 
-        self.learn = SpectralLearning(["0", "1"], learn_resolution)
-        self.model = self.learn.learn(lambda w: self.f(word2real(w, x0=x0, x1=x1)))
+        self.splrn = SpectralLearning(["0", "1"], learn_resolution)
+        self.model = self.splrn.learn(lambda w: self.f(word2real(w, x0=x0, x1=x1)))
+
+
+    def __repr__(self):
+        return "WFA {}: [{:.2f},{:.2f}] → R".format(self.f.__repr__(), self.x0, self.x1)
 
 
     def w2r(self, w : str):
