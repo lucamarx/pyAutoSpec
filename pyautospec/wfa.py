@@ -96,6 +96,13 @@ class Wfa:
         self.omega = self.omega.at[p].set(w)
 
 
+    def __call__(self, X):
+        """
+        Evaluate WFA over word X
+        """
+        return evaluate(self.alpha, self.A, self.omega, [self.alphabet_map[a] for a in X]).item()
+
+
     def evaluate(self, X):
         """
         Evaluate WFA over word X
