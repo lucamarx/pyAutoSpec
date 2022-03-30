@@ -54,3 +54,17 @@ automaton = learner.learn(f)
 ```
 
 see the [Automata Learning](<https://github.com/lucamarx/pyAutoSpec/blob/main/examples/Automata Learning.ipynb>) example.
+
+
+The same thing can be done for a function `f` that takes a number in an interval
+and returns a number, in this case you can do this
+
+```python
+from math import sin, pi
+from pyautospec import FunctionWfa
+
+# learn the sin function in the [0,2π] interval
+sin_aut = FunctionWfa(sin, x0=0.0, x1=2*pi, learn_resolution=2)
+```
+
+see the [Trigonometric Functions](<https://github.com/lucamarx/pyAutoSpec/blob/main/examples/Trigonometric Functions.ipynb>) example.
