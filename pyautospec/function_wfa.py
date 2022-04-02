@@ -8,24 +8,9 @@ from .wfa import Wfa
 from .spectral_learning import SpectralLearning
 
 
-def decode(w : str, x0 = 0.0, x1 = 1.0):
-    """
-    Decode word → x coordinate
-    """
-    if w == "":
-        return x0 + (x1-x0) / 2
-
-    if w[0] == "a":
-        x1 = x0 + (x1-x0)/2
-    elif w[0] == "b":
-        x0 = x1 - (x1-x0)/2
-
-    return decode(w[1:], x0, x1)
-
-
 def word2real(s : str, x0 : float = 0.0, x1 : float = 1.0):
     """
-    Convert the binary representation s of xϵ[x0,x1] into the number itself
+    Convert the binary representation s of xϵ[x0,x1) into the number itself
     """
     s = "0" + s
     return x0 + sum([int(s[i]) * 2**(-i) for i in range(0,len(s))]) * (x1-x0)
@@ -33,10 +18,10 @@ def word2real(s : str, x0 : float = 0.0, x1 : float = 1.0):
 
 def real2word(r : float, l : int = 8, x0 : float = 0.0, x1 : float = 1.0):
     """
-    Convert a real number xϵ[x0,x1] into its binary representation (with
+    Convert a real number xϵ[x0,x1) into its binary representation (with
     maximum length l)
     """
-    if r < x0 or r > x1:
+    if r < x0 or r >= x1:
         raise Exception("out of bounds")
 
     r = (r - x0) / (x1 - x0)
@@ -68,7 +53,7 @@ class FunctionWfa():
 
     def __init__(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_resolution : int = 3):
         """
-        Intialize learn a model of a real function f: [x0,x1] → R
+        Intialize learn a model of a real function f: [x0,x1) → R
         """
         self.f = f
 
