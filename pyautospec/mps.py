@@ -44,7 +44,7 @@ class Mps:
         # start with small bond dimension
         bond_d = 2
 
-        # setum tensor container
+        # setup tensor container
         self.mps = [np.random.rand(*s) for s in [(part_d,bond_d)] + [(bond_d,part_d,bond_d)]*(N-2) + [(bond_d,part_d)]]
         self.cache = None
 
@@ -189,6 +189,117 @@ class Mps:
             return u.reshape((bond_d_inp, self.part_d, bond_d)), v.reshape((bond_d, self.part_d))
 
         return u.reshape((bond_d_inp, self.part_d, bond_d)), v.reshape((bond_d, self.part_d, bond_d_out))
+
+
+    def _contract_left(self, k : int, X :np.ndarray) -> np.ndarray:
+        """
+        Contract MPS from left stopping at k < N-1
+
+        ╭───┐ ╭───┐       ╭───┐
+        │ 1 ├─┤ 2 ├─ ... ─┤ k ├─
+        └─┬─┘ └─┬─┘       └─┬─┘
+          ◯     ◯           ◯
+        """
+        L = np.einsum("bp,pj->bj", X[:,0,:], self._get(0))
+        for n in range(1,k+1):
+            L = np.einsum("bi,bp,ipj->bj", L, X[:,n,:], self._get(n))
+        return L
+
+
+    def _contract_right(self, k : int, X : np.ndarray) -> np.ndarray:
+        """
+        Contract MPS from right stopping at k > 0
+
+         ╭───┐       ╭───┐ ╭───┐
+        ─┤ k ├─ ... ─┤N-1├─┤ N │
+         └─┬─┘       └─┬─┘ └─┬─┘
+           ◯           ◯     ◯
+        """
+        R = np.einsum("ip,bp->bi", self._get(self.N-1), X[:,self.N-1,:])
+        for n in reversed(range(k,self.N-1)):
+            R = np.einsum("ipj,bp,bj->bi", self._get(n), X[:,n,:], R)
+        return R
+
+
+    def _initialize_cache(self, X : np.ndarray):
+        """
+        Initialize left contractions cache
+        """
+        self.cache = []
+        self.cache.append(np.einsum("bp,pj->bj", X[:, 0, :], self._get(0)))
+        for n in range(1, self.N-1):
+            self.cache.append(np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], self._get(n)))
+
+
+    def _gradient(self, k : int, B : np.ndarray, X : np.ndarray, use_cache : bool = False) -> float:
+        """
+        Evaluate
+
+               Z'    1
+        ∇B =  --- - --- Σ Ψ' /  Ψ
+               Z    |X|
+        where
+                      ╭───┐      ╭───┐            ╭───┐      ╭───┐
+        Ψ'[a,i,j,b] = │ 1 ├─ .. ─┤k-1├─a        b─┤k+2├─ .. ─┤ N │
+                      └─┬─┘      └─┬─┘   i    j   └─┬─┘      └─┬─┘
+                        │          │     │    │     │          │
+                        ◯          ◯     ◯    ◯     ◯          ◯
+                              L        x[k] x[k+1]       R
+        and
+            ╭───┐       ╭───┐
+        Ψ = │ 1 ├─ ... ─┤ N │
+            └─┬─┘       └─┬─┘
+              │           │
+              ◯           ◯
+        """
+        batch_d = X.shape[0]
+
+        if k == 0:
+            R = self.cache[k+2] if use_cache else self._contract_right(k+2, X)
+
+            # avoid mps re-evaluation
+            w = np.einsum("ipj,bp,bj->bi", self._get(1), X[:,k+1,:], R)
+            v = np.einsum("pi,bp,bi->b", self._get(0), X[:,k,:], w)
+
+            # perform tensor products
+            d = np.einsum("bp,bq,bi,b->bpqi", X[:,k,:], X[:,k+1,:], R, 1/v)
+
+            # normalization
+            Z = np.einsum("pqi,pqi->", B, B)
+
+        elif k == self.N-2:
+            L = self.cache[k-1] if use_cache else self._contract_left(k-1, X)
+
+            # avoid mps re-evaluation
+            u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], self._get(k))
+            v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], self._get(k+1))
+
+            # perform tensor products
+            d = np.einsum("bi,bp,bq,b->bipq", L, X[:,k,:], X[:,k+1,:], 1/v)
+
+            # normalization
+            Z = np.einsum("ipq,ipq->", B, B)
+
+        elif 0 < k and k < (self.N-2):
+            L = self.cache[k-1] if use_cache else self._contract_left(k-1, X)
+            u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], self._get(k))
+
+            R = self.cache[k+2] if use_cache else self._contract_right(k+2, X)
+            w = np.einsum("ipj,bp,bj->bi", self._get(k+1), X[:,k+1,:], R)
+
+            # avoid mps re evaluation
+            v = np.einsum("bi,bi->b", u, w)
+
+            # perform tensor products
+            d = np.einsum("bi,bp,bq,bj,b->bipqj", L, X[:,k,:], X[:,k+1,:], R, 1/v)
+
+            # normalization
+            Z = np.einsum("ipqj,ipqj->", B, B)
+
+        else:
+            raise Exception("invalid k")
+
+        return 2*(B/Z - np.sum(d) / batch_d)
 
 
     def squared_norm(self) -> float:
