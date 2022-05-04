@@ -107,6 +107,33 @@ class Mps:
   max bond dim:  {}
         """.format(self.N, norm, self.part_d, self.max_bond_d)
 
+    def squared_norm(self) -> float:
+        """
+        Compute the squared norm of the MPS
+        """
+        T = np.einsum("pi,pj->ij", self._get(0), self._get(0))
+        for n in range(1,self.N-1):
+            T = np.einsum("ij,ipk,jpl->kl", T, self._get(n), self._get(n))
+
+        T = np.einsum("ij,ip,jp->", T, self._get(self.N-1), self._get(self.N-1))
+
+        return T.item()
+
+
+    def log_likelihood(self, X : np.ndarray) -> float:
+        """
+        Min, max, average log-likelihood
+        """
+        l = self.log_likelihood_samples(X)
+        return np.min(l).item(), (np.sum(l).item() / X.shape[0]), np.max(l).item()
+
+
+    def log_likelihood_samples(self, X : np.ndarray) -> float:
+        """
+        Compute log-likelihood of each sample (assume mps is normalized)
+        """
+        return -2 * np.log(abs(self(X)))
+
 
     def __call__(self, X : np.ndarray) -> float:
         """
@@ -116,6 +143,12 @@ class Mps:
         │ 1 ├─┤ 2 ├─ ... ─┤ N │
         └─┬─┘ └─┬─┘       └─┬─┘
           ◯     ◯           ◯
+
+        Parameters:
+        -----------
+
+        X : np.ndarray
+        a batch of N part_d dimensional vectors
         """
         if len(X.shape) == 2:
             X = X.reshape((1, *X.shape))
