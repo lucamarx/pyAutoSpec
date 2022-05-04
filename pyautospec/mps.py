@@ -1,5 +1,5 @@
 """
-Matrix product state
+Matrix product state class
 """
 
 import numpy as np
@@ -73,6 +73,20 @@ class Mps:
         self._set(self.N-1, t / norm)
 
 
+    def __repr__(self) -> str:
+        norm = np.sqrt(np.einsum("pi,pi->", self._get(self.N-1), self._get(self.N-1)))
+
+        return """
+  ╭───┐ ╭───┐       ╭───┐
+  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
+  └─┬─┘ └─┬─┘       └─┬─┘
+
+          norm:  {:.2f}
+  particle dim:  {}
+  max bond dim:  {}
+        """.format(self.N, norm, self.part_d, self.max_bond_d)
+
+
     def _get(self, n : int) -> np.ndarray:
         """
         Get matrix at site n
@@ -94,18 +108,88 @@ class Mps:
             self.mps[n] = m[0:self.max_bond_d, :, 0:self.max_bond_d]
 
 
-    def __repr__(self) -> str:
-        norm = np.sqrt(np.einsum("pi,pi->", self._get(self.N-1), self._get(self.N-1)))
+    def _merge(self, k : int) -> np.ndarray:
+        """
+        Contract two adjacent rank 3 tensors into one rank 4 tensor
 
-        return """
-  ╭───┐ ╭───┐       ╭───┐
-  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
-  └─┬─┘ └─┬─┘       └─┬─┘
+         ╭───┐ ╭───┐     ╭────┐
+        ─┤ k ├─┤k+1├─ = ─┤    ├─
+         └─┬─┘ └─┬─┘     └┬──┬┘
 
-          norm:  {:.2f}
-  particle dim:  {}
-  max bond dim:  {}
-        """.format(self.N, norm, self.part_d, self.max_bond_d)
+        or at the head/tail
+
+         ╭───┐ ╭───┐     ╭────┐
+         │ 0 ├─┤ 1 ├─ =  │    ├─
+         └─┬─┘ └─┬─┘     └┬──┬┘
+
+         ╭───┐ ╭───┐     ╭────┐
+        ─┤N-1├─┤ N │  = ─┤    │
+         └─┬─┘ └─┬─┘     └┬──┬┘
+        """
+        if 0 < k and k+1 < self.N-1:
+            return np.einsum("ipj,jqk->ipqk", self._get(k), self._get(k+1))
+
+        if k == 0:
+            return np.einsum("pj,jqk->pqk", self._get(0), self._get(1))
+
+        if k+1 == self.N-1:
+            return np.einsum("ipj,jq->ipq", self._get(self.N-2), self._get(self.N-1))
+
+        raise Exception("invalid k")
+
+
+    def _split(self, k : int, B : np.ndarray, left : bool = True) -> np.ndarray:
+        """
+        Split a rank 3/4 tensor into two adjacent left/right canonical rank 2/3 tensors
+
+          ╭────┐     ╭───┐   ╭───┐
+         ─┤    ├─ = ─┤   ├─ ─┤   ├─
+          └┬──┬┘     └─┬─┘   └─┬─┘
+        """
+        if len(B.shape) == 3:
+            if k == 0:
+                # split head tensor
+                bond_d_inp = None
+                bond_d_out = B.shape[2]
+                m = B.reshape((self.part_d, self.part_d * bond_d_out))
+
+            elif k == self.N-2:
+                # split tail tensor
+                bond_d_inp = B.shape[0]
+                bond_d_out = None
+                m = B.reshape((bond_d_inp * self.part_d, self.part_d))
+
+            else:
+                raise Exception("invalid head/tail bond tensor shape")
+
+        elif len(B.shape) == 4:
+            bond_d_inp = B.shape[0]
+            bond_d_out = B.shape[3]
+            m = B.reshape((bond_d_inp * self.part_d, self.part_d * bond_d_out))
+
+        else:
+            raise Exception("invalid bond tensor shape")
+
+        u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
+
+        # truncate singular values
+        # bond_d = cp.argmin(s / s[0] > svd_thresh)
+        # s[bond_d:] = 0
+        bond_d = u.shape[1]
+
+        if left:
+            v = np.einsum("i,ij->ij", s, v)
+        else:
+            u = np.einsum("ij,j->ij", u, s)
+
+        if k == 0:
+            return u.reshape((self.part_d, bond_d)), v.reshape((bond_d, self.part_d, bond_d_out))
+
+        if k == self.N-2:
+            return u.reshape((bond_d_inp, self.part_d, bond_d)), v.reshape((bond_d, self.part_d))
+
+        return u.reshape((bond_d_inp, self.part_d, bond_d)), v.reshape((bond_d, self.part_d, bond_d_out))
+
 
     def squared_norm(self) -> float:
         """
