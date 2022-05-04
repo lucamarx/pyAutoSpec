@@ -1,8 +1,9 @@
 """
 Matrix product state class
 """
-
 import numpy as np
+
+from tqdm.auto import tqdm
 
 
 class Mps:
@@ -302,6 +303,39 @@ class Mps:
         return 2*(B/Z - np.sum(d) / batch_d)
 
 
+    def _move_pivot(self, X : np.ndarray, n : int, learn_rate : float, direction : str) -> int:
+        """
+        Optimize chain at pivot point n (moving in direction)
+        """
+        B = self._merge(n)
+        G = self._gradient(n, B, X, use_cache=True)
+
+        B -= learn_rate * G
+
+        A1, A2 = self._split(n, B, left=(direction == "left2right"))
+
+        self._set(n, A1)
+        self._set(n+1, A2)
+
+        if direction == "right2left":
+            if n+1 == self.N-1:
+                self.cache[n+1] = np.einsum("ip,bp->bi", self._get(n+1), X[:, n+1, :])
+            else:
+                self.cache[n+1] = np.einsum("ipj,bp,bj->bi", self._get(n+1), X[:, n+1, :], self.cache[n+2])
+
+            return n-1
+
+        if direction == "left2right":
+            if n == 0:
+                self.cache[n] = np.einsum("bp,pi->bi", X[:, n, :], self._get(n))
+            else:
+                self.cache[n] = np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], self._get(n))
+
+            return n+1
+
+        raise Exception("invalid direction")
+
+
     def squared_norm(self) -> float:
         """
         Compute the squared norm of the MPS
@@ -358,3 +392,74 @@ class Mps:
         T = np.einsum("bi,bp,ip->b", T, X[:,self.N-1,:], self._get(self.N-1))
 
         return T
+
+
+    def fit(self, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+        """
+        Fit the MPS to the data
+
+        0. for each epoch
+        1.  sample a random mini-batch from X
+        2.  sweep right → left (left → right)
+        3.   contract A^k and A^(k+1) into B^k
+        4.   evaluate gradients for mini-batch
+        5.   update B^k
+        6.   split B^k with SVD ensuring canonicalization
+        7.   move to next k
+
+        Parameters:
+        -----------
+        X : np.ndarray
+        the data to be fitted (must have shape (n,N,part_d))
+
+        learn_rate : float
+        learning rate
+
+        batch_size : int
+        batch size
+
+        epochs : int
+        number of epochs
+        """
+        if len(X.shape) != 3:
+            raise Exception("invalid data")
+
+        if X.shape[1] != self.N:
+            raise Exception("invalid shape for X (wrong particle number)")
+
+        if X.shape[2] != self.part_d:
+            raise Exception("invalid shape for X (wrong particle dimension)")
+
+        for epoch in tqdm(range(1, epochs+1)):
+            for _ in range(1, int(X.shape[0] / batch_size)):
+                batch = X[np.random.randint(0, high=X.shape[0], size=batch_size)]
+
+                self._initialize_cache(batch)
+
+                # right to left pass
+                n = self.N-2
+                while True:
+                    n = self._move_pivot(batch, n, learn_rate, "right2left")
+                    if n == -1:
+                        break
+
+                # normalize
+                t = self._get(0)
+                norm = np.sqrt(np.einsum("pi,pi->", t, t))
+                self._set(0, t / norm)
+
+                # left to right pass
+                n = 0
+                while True:
+                    n = self._move_pivot(batch, n, learn_rate, "left2right")
+                    if n == self.N-1:
+                        break
+
+                # normalize
+                t = self._get(self.N-1)
+                norm = np.sqrt(np.einsum("ip,ip->", t, t))
+                self._set(self.N-1, t / norm)
+
+            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *self.log_likelihood(X)))
+
+        return self
