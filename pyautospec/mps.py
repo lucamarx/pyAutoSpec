@@ -3,6 +3,7 @@ Matrix product state class
 """
 import numpy as np
 
+from typing import Tuple
 from tqdm.auto import tqdm
 
 
@@ -119,7 +120,7 @@ class Mps:
         ─┤ k ├─┤k+1├─ = ─┤    ├─
          └─┬─┘ └─┬─┘     └┬──┬┘
 
-        or at the head/tail
+        or at the head/tail of the train
 
          ╭───┐ ╭───┐     ╭────┐
          │ 0 ├─┤ 1 ├─ =  │    ├─
@@ -148,6 +149,16 @@ class Mps:
           ╭────┐     ╭───┐   ╭───┐
          ─┤    ├─ = ─┤   ├─ ─┤   ├─
           └┬──┬┘     └─┬─┘   └─┬─┘
+
+        or at the head/tail of the train
+
+          ╭────┐     ╭───┐ ╭───┐
+          │    ├─ =  │ 0 ├─┤ 1 ├─
+          └┬──┬┘     └─┬─┘ └─┬─┘
+
+          ╭────┐     ╭───┐ ╭───┐
+         ─┤    │  = ─┤N-1├─┤ N │
+          └┬──┬┘     └─┬─┘ └─┬─┘
         """
         if len(B.shape) == 3:
             if k == 0:
@@ -350,7 +361,7 @@ class Mps:
         return T.item()
 
 
-    def log_likelihood(self, X : np.ndarray) -> float:
+    def log_likelihood(self, X : np.ndarray) -> Tuple[float, float, float]:
         """
         Min, max, average log-likelihood
         """
@@ -358,7 +369,7 @@ class Mps:
         return np.min(l).item(), (np.sum(l).item() / X.shape[0]), np.max(l).item()
 
 
-    def log_likelihood_samples(self, X : np.ndarray) -> float:
+    def log_likelihood_samples(self, X : np.ndarray) -> np.ndarray:
         """
         Compute log-likelihood of each sample (assume mps is normalized)
         """
@@ -379,6 +390,11 @@ class Mps:
 
         X : np.ndarray
         a batch of N part_d dimensional vectors
+
+        Returns:
+        --------
+
+        the value of the tensor for the batch X
         """
         if len(X.shape) == 2:
             X = X.reshape((1, *X.shape))
