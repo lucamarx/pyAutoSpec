@@ -37,7 +37,7 @@ setup(
         "jaxlib>=0.3.0",
         "jax>=0.3.0",
     ],
-    # extras_require={
-    #     "test": ["unittest"]
-    # }
+    extras_require={
+        "test": ["unittest"]
+    }
 )
