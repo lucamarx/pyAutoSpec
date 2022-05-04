@@ -47,7 +47,9 @@ class Mps:
 
         # setup tensor container
         self.mps = [np.random.rand(*s) for s in [(part_d,bond_d)] + [(bond_d,part_d,bond_d)]*(N-2) + [(bond_d,part_d)]]
-        self.cache = None
+
+        # setup contraction cache
+        self.cache = [None]*self.N
 
         # make mps left canonical
         for n in range(self.N-1):
@@ -226,10 +228,9 @@ class Mps:
         """
         Initialize left contractions cache
         """
-        self.cache = []
-        self.cache.append(np.einsum("bp,pj->bj", X[:, 0, :], self._get(0)))
+        self.cache[0] = np.einsum("bp,pj->bj", X[:, 0, :], self._get(0))
         for n in range(1, self.N-1):
-            self.cache.append(np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], self._get(n)))
+            self.cache[n] = np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], self._get(n))
 
 
     def _gradient(self, k : int, B : np.ndarray, X : np.ndarray, use_cache : bool = False) -> float:
