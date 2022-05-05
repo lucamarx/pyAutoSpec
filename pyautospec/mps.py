@@ -71,24 +71,16 @@ class Mps:
             else:
                 self._set(n+1, np.einsum("i,ij,jq->iq", s, v, self._get(n+1)))
 
-        # normalize
-        t = self._get(self.N-1)
-        norm = np.sqrt(np.einsum("pi,pi->", t, t))
-        self._set(self.N-1, t / norm)
-
 
     def __repr__(self) -> str:
-        norm = np.sqrt(np.einsum("pi,pi->", self._get(self.N-1), self._get(self.N-1)))
-
         return """
   ╭───┐ ╭───┐       ╭───┐
   │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
   └─┬─┘ └─┬─┘       └─┬─┘
 
-          norm:  {:.2f}
   particle dim:  {}
   max bond dim:  {}
-        """.format(self.N, norm, self.part_d, self.max_bond_d)
+        """.format(self.N, self.part_d, self.max_bond_d)
 
 
     def _get(self, n : int) -> np.ndarray:
@@ -120,7 +112,7 @@ class Mps:
         ─┤ k ├─┤k+1├─ = ─┤    ├─
          └─┬─┘ └─┬─┘     └┬──┬┘
 
-        or at the head/tail of the train
+        or at the head/tail of the chain
 
          ╭───┐ ╭───┐     ╭────┐
          │ 0 ├─┤ 1 ├─ =  │    ├─
@@ -150,7 +142,7 @@ class Mps:
          ─┤    ├─ = ─┤   ├─ ─┤   ├─
           └┬──┬┘     └─┬─┘   └─┬─┘
 
-        or at the head/tail of the train
+        or at the head/tail of the chain
 
           ╭────┐     ╭───┐ ╭───┐
           │    ├─ =  │ 0 ├─┤ 1 ├─
@@ -244,26 +236,27 @@ class Mps:
             self.cache[n] = np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], self._get(n))
 
 
-    def _gradient(self, k : int, B : np.ndarray, X : np.ndarray, use_cache : bool = False) -> float:
+    def _gradient(self, k : int, X : np.ndarray, y : np.ndarray, use_cache : bool = False) -> float:
         """
-        Evaluate
+        Let
 
-               Z'    1
-        ∇B =  --- - --- Σ Ψ' /  Ψ
-               Z    |X|
+              1                   2
+        C =  --- Σ  (f(X_n) - y_n)
+              N   n
+
+        evaluate
+
+               2
+        ∇ C = --- Σ  (f(X_n) - y_n) ∇ f(X_n)
+         B     N   n                 B
+
         where
-                      ╭───┐      ╭───┐            ╭───┐      ╭───┐
-        Ψ'[a,i,j,b] = │ 1 ├─ .. ─┤k-1├─a        b─┤k+2├─ .. ─┤ N │
-                      └─┬─┘      └─┬─┘   i    j   └─┬─┘      └─┬─┘
-                        │          │     │    │     │          │
-                        ◯          ◯     ◯    ◯     ◯          ◯
-                              L        x[k] x[k+1]       R
-        and
-            ╭───┐       ╭───┐
-        Ψ = │ 1 ├─ ... ─┤ N │
-            └─┬─┘       └─┬─┘
-              │           │
-              ◯           ◯
+                       ╭───┐      ╭───┐            ╭───┐      ╭───┐
+        ∇ f[a,i,j,b] = │ 1 ├─ .. ─┤k-1├─a        b─┤k+2├─ .. ─┤ N │
+         B             └─┬─┘      └─┬─┘   i    j   └─┬─┘      └─┬─┘
+                         │          │     │    │     │          │
+                         ◯          ◯     ◯    ◯     ◯          ◯
+                               L        x[k] x[k+1]       R
         """
         batch_d = X.shape[0]
 
@@ -275,10 +268,7 @@ class Mps:
             v = np.einsum("pi,bp,bi->b", self._get(0), X[:,k,:], w)
 
             # perform tensor products
-            d = np.einsum("bp,bq,bi,b->bpqi", X[:,k,:], X[:,k+1,:], R, 1/v)
-
-            # normalization
-            Z = np.einsum("pqi,pqi->", B, B)
+            d = np.einsum("bp,bq,bi,b->pqi", X[:,k,:], X[:,k+1,:], R, (v - y))
 
         elif k == self.N-2:
             L = self.cache[k-1] if use_cache else self._contract_left(k-1, X)
@@ -288,10 +278,7 @@ class Mps:
             v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], self._get(k+1))
 
             # perform tensor products
-            d = np.einsum("bi,bp,bq,b->bipq", L, X[:,k,:], X[:,k+1,:], 1/v)
-
-            # normalization
-            Z = np.einsum("ipq,ipq->", B, B)
+            d = np.einsum("bi,bp,bq,b->ipq", L, X[:,k,:], X[:,k+1,:], (v - y))
 
         elif 0 < k and k < (self.N-2):
             L = self.cache[k-1] if use_cache else self._contract_left(k-1, X)
@@ -304,23 +291,20 @@ class Mps:
             v = np.einsum("bi,bi->b", u, w)
 
             # perform tensor products
-            d = np.einsum("bi,bp,bq,bj,b->bipqj", L, X[:,k,:], X[:,k+1,:], R, 1/v)
-
-            # normalization
-            Z = np.einsum("ipqj,ipqj->", B, B)
+            d = np.einsum("bi,bp,bq,bj,b->ipqj", L, X[:,k,:], X[:,k+1,:], R, (v - y))
 
         else:
             raise Exception("invalid k")
 
-        return 2*(B/Z - np.sum(d) / batch_d)
+        return 2 * d / batch_d
 
 
-    def _move_pivot(self, X : np.ndarray, n : int, learn_rate : float, direction : str) -> int:
+    def _move_pivot(self, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float, direction : str) -> int:
         """
         Optimize chain at pivot point n (moving in direction)
         """
         B = self._merge(n)
-        G = self._gradient(n, B, X, use_cache=True)
+        G = self._gradient(n, X, y, use_cache=True)
 
         B -= learn_rate * G
 
@@ -348,35 +332,15 @@ class Mps:
         raise Exception("invalid direction")
 
 
-    def squared_norm(self) -> float:
+    def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
         """
-        Compute the squared norm of the MPS
+        Compute cost function
         """
-        T = np.einsum("pi,pj->ij", self._get(0), self._get(0))
-        for n in range(1,self.N-1):
-            T = np.einsum("ij,ipk,jpl->kl", T, self._get(n), self._get(n))
-
-        T = np.einsum("ij,ip,jp->", T, self._get(self.N-1), self._get(self.N-1))
-
-        return T.item()
+        c = np.square(self(X) - y)
+        return np.min(c).item(), (np.sum(c).item() / X.shape[0]), np.max(c).item()
 
 
-    def log_likelihood(self, X : np.ndarray) -> Tuple[float, float, float]:
-        """
-        Min, max, average log-likelihood
-        """
-        l = self.log_likelihood_samples(X)
-        return np.min(l).item(), (np.sum(l).item() / X.shape[0]), np.max(l).item()
-
-
-    def log_likelihood_samples(self, X : np.ndarray) -> np.ndarray:
-        """
-        Compute log-likelihood of each sample (assume mps is normalized)
-        """
-        return -2 * np.log(abs(self(X)))
-
-
-    def __call__(self, X : np.ndarray) -> float:
+    def __call__(self, X : np.ndarray) -> np.ndarray:
         """
         Evaluate MPS on batch X[b,n,p]
 
@@ -411,7 +375,7 @@ class Mps:
         return T
 
 
-    def fit(self, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
         """
         Fit the MPS to the data
 
@@ -427,7 +391,9 @@ class Mps:
         Parameters:
         -----------
         X : np.ndarray
-        the data to be fitted (must have shape (n,N,part_d))
+
+        y : np.ndarray
+        the data to be fitted
 
         learn_rate : float
         learning rate
@@ -449,34 +415,26 @@ class Mps:
 
         for epoch in tqdm(range(1, epochs+1)):
             for _ in range(1, int(X.shape[0] / batch_size)):
-                batch = X[np.random.randint(0, high=X.shape[0], size=batch_size)]
+                batch = np.random.randint(0, high=X.shape[0], size=batch_size)
+                X_batch, y_batch = X[batch], y[batch]
 
-                self._initialize_cache(batch)
+                self._initialize_cache(X_batch)
 
                 # right to left pass
                 n = self.N-2
                 while True:
-                    n = self._move_pivot(batch, n, learn_rate, "right2left")
+                    n = self._move_pivot(X_batch, y_batch, n, learn_rate, "right2left")
                     if n == -1:
                         break
-
-                # normalize
-                t = self._get(0)
-                norm = np.sqrt(np.einsum("pi,pi->", t, t))
-                self._set(0, t / norm)
 
                 # left to right pass
                 n = 0
                 while True:
-                    n = self._move_pivot(batch, n, learn_rate, "left2right")
+                    n = self._move_pivot(X_batch, y_batch, n, learn_rate, "left2right")
                     if n == self.N-1:
                         break
 
-                # normalize
-                t = self._get(self.N-1)
-                norm = np.sqrt(np.einsum("ip,ip->", t, t))
-                self._set(self.N-1, t / norm)
-
-            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *self.log_likelihood(X)))
+            if epoch % 10 == 0:
+                print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *self.cost(X, y)))
 
         return self
