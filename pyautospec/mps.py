@@ -3,7 +3,7 @@ Matrix product state class
 """
 import numpy as np
 
-from typing import Tuple
+from typing import List, Tuple
 from tqdm.auto import tqdm
 
 
@@ -438,3 +438,79 @@ class Mps:
                 print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *self.cost(X, y)))
 
         return self
+
+
+class SymbolicMps(Mps):
+    """
+    A symbolic matrix product state operate on fixed length sequences of
+    symbols.
+
+    These are converted into vectors by one-hot encoding.
+    """
+
+    def __init__(self, N : int, alphabet : int = 2, max_bond_d : int = 20):
+        """
+        Initialize a random symbolic matrix product state
+
+        Parameters:
+        -----------
+
+        N : int
+        sequence length
+
+        alphabet : int
+        alphabet size
+
+        max_bond_d: int
+        maximum bond dimension
+        """
+        self.super().__init__(N, alphabet, max_bond_d)
+
+
+    def __repr__(self) -> str:
+        return """
+  ╭───┐ ╭───┐       ╭───┐
+  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
+  └─┬─┘ └─┬─┘       └─┬─┘
+
+  alphabet size:  {}
+   max bond dim:  {}
+        """.format(self.N, self.part_d, self.max_bond_d)
+
+
+    def _one_hot(self, X : List[List[int]]) -> np.ndarray:
+        """
+        Perform one-hot encoding
+        """
+        idxs = np.array(X).reshape(-1)
+        return np.eye(self.part_d)[idxs].reshape((-1, self.part_d))
+
+
+    def __call__(self, X : List[List[int]]) -> np.ndarray:
+        """
+        Evaluate MPS on words
+
+        ╭───┐ ╭───┐       ╭───┐
+        │ 1 ├─┤ 2 ├─ ... ─┤ N │
+        └─┬─┘ └─┬─┘       └─┬─┘
+          ◯     ◯           ◯
+
+        Parameters:
+        -----------
+
+        X : List[List[int]]
+        a list ow words in the mps alphabet
+
+        Returns:
+        --------
+
+        the values of the tensor
+        """
+        return super().__call__(self._one_hot(X))
+
+
+    def fit(self, X : List[List[int]], y : List[float]):
+        """
+        Fit the MPS to the data
+        """
+        return self.super().fit(self._one_hot(X), np.array(y))
