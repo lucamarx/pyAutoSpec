@@ -483,7 +483,7 @@ class SymbolicMps():
         Perform one-hot encoding
         """
         idxs = np.array(X).reshape(-1)
-        return np.eye(self.part_d)[idxs].reshape((-1, self.part_d))
+        return np.eye(self.mps.part_d)[idxs].reshape((-1, self.mps.N, self.mps.part_d))
 
 
     def __call__(self, X : List[List[int]]) -> np.ndarray:
