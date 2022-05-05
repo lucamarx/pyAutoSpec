@@ -440,7 +440,7 @@ class Mps:
         return self
 
 
-class SymbolicMps(Mps):
+class SymbolicMps():
     """
     A symbolic matrix product state operate on fixed length sequences of
     symbols.
@@ -464,7 +464,7 @@ class SymbolicMps(Mps):
         max_bond_d: int
         maximum bond dimension
         """
-        self.super().__init__(N, alphabet, max_bond_d)
+        self.mps = Mps(N, alphabet, max_bond_d)
 
 
     def __repr__(self) -> str:
@@ -475,7 +475,7 @@ class SymbolicMps(Mps):
 
   alphabet size:  {}
    max bond dim:  {}
-        """.format(self.N, self.part_d, self.max_bond_d)
+        """.format(self.mps.N, self.mps.part_d, self.mps.max_bond_d)
 
 
     def _one_hot(self, X : List[List[int]]) -> np.ndarray:
@@ -506,11 +506,12 @@ class SymbolicMps(Mps):
 
         the values of the tensor
         """
-        return super().__call__(self._one_hot(X))
+        return self.mps(self._one_hot(X))
 
 
-    def fit(self, X : List[List[int]], y : List[float]):
+    def fit(self, X : List[List[int]], y : List[float], learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
         """
         Fit the MPS to the data
         """
-        return self.super().fit(self._one_hot(X), np.array(y))
+        self.mps.fit(self._one_hot(X), np.array(y), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        return self
