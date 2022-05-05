@@ -50,21 +50,21 @@ class FunctionMps():
 
         self.model = SymbolicMps(sequence_length, 2, max_bond_dim)
 
-        data = [(list(x), f(word2real(x, x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * sequence_length))]
+        data = [(list(x), f(word2real(list(x), x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * sequence_length))]
 
-        self.model.fit([t[0] for t in data], [t[1] for t in data])
+        self.model.fit([t[0] for t in data], [t[1] for t in data], learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
 
     def __repr__(self):
-        return "MPS(N={}) {}: [{:.2f},{:.2f}] → R".format(self.model.N, self.f.__repr__(), self.x0, self.x1)
+        return "MPS(N={}) {}: [{:.2f},{:.2f}] → R".format(self.model.mps.N, self.f.__repr__(), self.x0, self.x1)
 
 
-    def __call__(self, X : float) -> float:
+    def __call__(self, x : float) -> float:
         """
         Parameters:
         -----------
 
-        X : float
+        x : float
         a point in [x0,x1)
 
         Returns:
@@ -72,7 +72,9 @@ class FunctionMps():
 
         the value of the function at x
         """
-        return self.model([real2word(X, l=self.model.N)])[0]
+        return self.model([real2word(x, l=self.model.mps.N, x0=self.x0, x1=self.x1)])[0]
+
+
     def comparison_chart(self, n_points : int = 50):
         """
         Compare the two functions
