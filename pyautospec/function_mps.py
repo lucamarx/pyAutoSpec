@@ -1,7 +1,9 @@
 """
 Mps based function compression algorithm
 """
+import numpy as np
 import itertools
+import matplotlib.pyplot as plt
 
 from typing import List
 from .mps import SymbolicMps
@@ -71,3 +73,22 @@ class FunctionMps():
         the value of the function at x
         """
         return self.model([real2word(X, l=self.model.N)])[0]
+    def comparison_chart(self, n_points : int = 50):
+        """
+        Compare the two functions
+        """
+        xs = np.linspace(self.x0, self.x1, endpoint = False, num = n_points)
+
+        v0 = np.array([self.f(x) for x in xs])
+        v1 = np.array([self(x) for x in xs])
+
+        error = np.abs(v1 - v0)
+
+        plt.figure()
+
+        plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), np.average(error), np.max(error)))
+
+        plt.plot(xs, v0, label="original f")
+        plt.plot(xs, v1, label="f")
+
+        plt.legend()
