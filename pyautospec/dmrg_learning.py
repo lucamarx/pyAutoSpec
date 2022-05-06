@@ -41,6 +41,34 @@ def _cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
     return np.min(c).item(), (np.sum(c).item() / X.shape[0]), np.max(c).item()
 
 
+def _squared_norm(mps) -> float:
+    """
+    Compute the squared norm of the MPS
+    """
+    T = np.einsum("pi,pj->ij", mps[0], mps[0])
+    for n in range(1,mps.N-1):
+        T = np.einsum("ij,ipk,jpl->kl", T, mps[n], mps[n])
+
+    T = np.einsum("ij,ip,jp->", T, mps[mps.N-1], mps[mps.N-1])
+
+    return T.item()
+
+
+def _log_likelihood_samples(mps, X : np.ndarray) -> float:
+    """
+    Compute log-likelihood of each sample (assume mps is normalized)
+    """
+    return -2 * np.log(abs(mps(X)))
+
+
+def _log_likelihood(mps, X : np.ndarray) -> Tuple[float, float, float]:
+    """
+    Min, max, average log-likelihood
+    """
+    l = _log_likelihood_samples(mps, X)
+    return np.min(l).item(), (np.sum(l).item() / X.shape[0]), np.max(l).item()
+
+
 def _merge(mps, k : int) -> np.ndarray:
     """
     Contract two adjacent rank 3 tensors into one rank 4 tensor
@@ -164,7 +192,7 @@ def _contract_right(mps, k : int, X : np.ndarray) -> np.ndarray:
     return R
 
 
-def _gradient(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionCache = None) -> float:
+def _gradient_regression(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionCache = None) -> float:
     """
     Let
 
@@ -227,12 +255,87 @@ def _gradient(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionC
     return 2 * d / batch_d
 
 
+def _gradient_classification(mps, k : int, B : np.ndarray, X : np.ndarray, cache : ContractionCache = None):
+    """
+    Evaluate
+
+           Z'    1
+    ∇B =  --- - --- Σ Ψ'/ Ψ
+           Z    |X|
+    where
+                  ╭───┐      ╭───┐            ╭───┐      ╭───┐
+    Ψ'[a,i,j,b] = │ 1 ├─ .. ─┤k-1├─a        b─┤k+2├─ .. ─┤ N │
+                  └─┬─┘      └─┬─┘   i    j   └─┬─┘      └─┬─┘
+                    │          │     │    │     │          │
+                    ◯          ◯     ◯    ◯     ◯          ◯
+                          L        x[k] x[k+1]       R
+    and
+        ╭───┐       ╭───┐
+    Ψ = │ 1 ├─ ... ─┤ N │
+        └─┬─┘       └─┬─┘
+          │           │
+          ◯           ◯
+    """
+    batch_d = X.shape[0]
+
+    if k == 0:
+        R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
+
+        # avoid mps re-evaluation
+        w = np.einsum("ipj,bp,bj->bi", mps[1], X[:,k+1,:], R)
+        v = np.einsum("pi,bp,bi->b", mps[0], X[:,k,:], w)
+
+        # perform tensor products
+        d = np.einsum("bp,bq,bi,b->bpqi", X[:,k,:], X[:,k+1,:], R, 1/v)
+
+        # normalization
+        Z = np.einsum("pqi,pqi->", B, B)
+
+    elif k == mps.N-2:
+        L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
+
+        # avoid mps re-evaluation
+        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
+        v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], mps[k+1])
+
+        # perform tensor products
+        d = np.einsum("bi,bp,bq,b->bipq", L, X[:,k,:], X[:,k+1,:], 1/v)
+
+        # normalization
+        Z = np.einsum("ipq,ipq->", B, B)
+
+    elif 0 < k and k < (mps.N-2):
+        L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
+        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
+
+        R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
+        w = np.einsum("ipj,bp,bj->bi", mps[+1], X[:,k+1,:], R)
+
+        # avoid mps re evaluation
+        v = np.einsum("bi,bi->b", u, w)
+
+        # perform tensor products
+        d = np.einsum("bi,bp,bq,bj,b->bipqj", L, X[:,k,:], X[:,k+1,:], R, 1/v)
+
+        # normalization
+        Z = np.einsum("ipqj,ipqj->", B, B)
+
+    else:
+        raise Exception("invalid k")
+
+    return 2*(B/Z - np.sum(d) / batch_d)
+
+
 def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float, direction : str, cache : ContractionCache = None) -> int:
     """
     Optimize chain at pivot point n (moving in direction)
     """
     B = _merge(mps, n)
-    G = _gradient(mps, n, X, y, cache=cache)
+
+    if y is not None:
+        G = _gradient_regression(mps, n, X, y, cache=cache)
+    else:
+        G = _gradient_classification(mps, n, B, X, cache=cache)
 
     B -= learn_rate * G
 
@@ -321,3 +424,71 @@ def _fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.
 
         if epoch % 10 == 0:
             print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_cost(mps, X, y)))
+
+
+def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    """
+    Fit the MPS to the data
+
+    0. for each epoch
+    1.  sample a random mini-batch from X
+    2.  sweep right → left (left → right)
+    3.   contract A^k and A^(k+1) into B^k
+    4.   evaluate gradients for mini-batch
+    5.   update B^k
+    6.   split B^k with SVD ensuring canonicalization
+    7.   move to next k
+
+    Parameters:
+    -----------
+    X : np.ndarray
+
+    learn_rate : float
+    learning rate
+
+    batch_size : int
+    batch size
+
+    epochs : int
+    number of epochs
+    """
+    if len(X.shape) != 3:
+        raise Exception("invalid data")
+
+    if X.shape[1] != mps.N:
+        raise Exception("invalid shape for X (wrong particle number)")
+
+    if X.shape[2] != mps.part_d:
+        raise Exception("invalid shape for X (wrong particle dimension)")
+
+    for epoch in tqdm(range(1, epochs+1)):
+        for _ in range(1, int(X.shape[0] / batch_size)):
+            X_batch = X[np.random.randint(0, high=X.shape[0], size=batch_size)]
+
+            cache = ContractionCache(mps, X_batch)
+
+            # right to left pass
+            n = mps.N-2
+            while True:
+                n = _move_pivot(mps, X_batch, None, n, "right2left", cache=cache)
+                if n == -1:
+                    break
+
+            # normalize
+            t = mps[0]
+            norm = np.sqrt(np.einsum("pi,pi->", t, t))
+            mps[0] = t / norm
+
+            # left to right pass
+            n = 0
+            while True:
+                n = _move_pivot(mps, X_batch, None, n, "left2right", cache=cache)
+                if n == mps.N-1:
+                    break
+
+            # normalize
+            t = mps[self.N-1]
+            norm = np.sqrt(np.einsum("ip,ip->", t, t))
+            mps[self.N-1] = t / norm
+
+        print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_log_likelihood(mps, X)))
