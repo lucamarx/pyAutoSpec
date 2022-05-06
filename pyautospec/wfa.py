@@ -47,6 +47,15 @@ class Wfa:
     def set_starting_state(self, p : int, w : float = 1):
         """
         Set state p as starting with weight w
+
+        Parameters:
+        -----------
+
+        p : int
+        a state
+
+        w : float
+        the initial weight
         """
         self.alpha = self.alpha.at[p].set(w)
 
@@ -54,6 +63,18 @@ class Wfa:
     def add_transition(self, p : int, l : str, w : float, q : int):
         """
         Add transition p -l-> q with weight w
+
+        Parameters:
+        -----------
+
+        p : int
+        the start state
+
+        p : int
+        the end state
+
+        w : float
+        the transition weight
         """
         self.A = self.A.at[p, self.alphabet_map[l], q].set(w)
 
@@ -61,6 +82,15 @@ class Wfa:
     def set_accepting_state(self, p : int, w : float = 1.0):
         """
         Set state p as accepting with weight w
+
+        Parameters:
+        -----------
+
+        p : int
+        a state
+
+        w : float
+        the final weight
         """
         self.omega = self.omega.at[p].set(w)
 

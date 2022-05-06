@@ -66,6 +66,8 @@ class FunctionMps():
 
     def __call__(self, x : float) -> float:
         """
+        Evaluate learned function at x
+
         Parameters:
         -----------
 

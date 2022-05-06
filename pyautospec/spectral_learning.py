@@ -35,10 +35,26 @@ def pseudo_inverse(M):
     return jnp.dot(jnp.dot(jnp.transpose(Vt), Sinv), jnp.transpose(U))
 
 
-def spectral_learning(hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : int = None) -> Wfa:
+def spectral_learning(hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : int = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Perform spectral learning of Hankel blocks and build WFA truncating
     SVD expansion to n_states (if specified).
+
+    Parameters:
+    -----------
+
+    hp : np.ndarray
+
+    H  : np.ndarray
+
+    Hs : np.ndarray
+
+    hs : np.ndarray
+
+    Returns:
+    --------
+
+    The tuple (alpha, A, omega)
     """
     # convert to jax arrays
     hp = jnp.array(hp)
