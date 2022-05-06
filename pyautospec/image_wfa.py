@@ -76,7 +76,7 @@ class ImageWfa():
             (x, y), s = decode(w, sz=image.shape[0])
 
             v0 = self.image[x, y] if s == 0 else np.average(self.image[x:(x+s), y:(y+s)])
-            v1 = self.model.evaluate(w)
+            v1 = self.model(w)
 
             error += abs(v1 - v0)
             count += 1

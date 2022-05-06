@@ -113,4 +113,4 @@ class Wfa:
         """
         Plot weight contributions
         """
-        transition_plot(X, threshold)
+        transition_plot(self, X, threshold)

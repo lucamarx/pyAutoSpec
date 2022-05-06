@@ -43,28 +43,28 @@ def word_paths(alpha, A, omega, X, threshold):
     return res
 
 
-def transition_plot(self, X : List[str], threshold : float = 1e-4):
+def transition_plot(wfa, X : List[str], threshold : float = 1e-4):
     """
     Plot weight contributions
     """
     _, host = plt.subplots(figsize=(12,4))
 
-    host.set_title("'{}' → {:.4f}".format(X, self(X)), fontsize=18, pad=25)
+    host.set_title("'{}' → {:.4f}".format(X, wfa(X)), fontsize=18, pad=25)
     host.set_xlim(0, len(X))
     host.set_xticks([], labels=None)
 
     axes = [host] + [host.twinx() for _ in range(len(X))]
 
     for i, ax in enumerate(axes):
-        ax.set_ylim(0, len(self) - 1)
-        ax.set_yticks(range(len(self)), labels=None)
+        ax.set_ylim(0, len(wfa) - 1)
+        ax.set_yticks(range(len(wfa)), labels=None)
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         if ax != host:
             ax.spines['left'].set_visible(False)
             ax.spines["right"].set_position(("axes", i / len(X)))
 
-    paths = word_paths(self.alpha, self.A, self.omega, [self.alphabet_map[a] for a in X], threshold)
+    paths = word_paths(wfa.alpha, wfa.A, wfa.omega, [wfa.alphabet_map[a] for a in X], threshold)
     colors = plt.cm.Set2.colors
     max_weight = max([abs(p[1]) for p in paths])
 
@@ -89,7 +89,7 @@ def function_wfa_comparison_chart(wfa, n_points : int = 50, resolution : int = 1
     """
     Compare the learned wfa with the original function
     """
-    xs = jnp.linspace(wfa.encdr.x0, wfa.encdr.x1, endpoint = False, num = n_points)
+    xs = jnp.linspace(wfa.x0, wfa.x1, endpoint = False, num = n_points)
 
     v0 = jnp.array([wfa.f(x) for x in xs])
     v1 = jnp.array([wfa(x, resolution) for x in xs])
