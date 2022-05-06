@@ -5,12 +5,10 @@ import numpy as np
 import jax.numpy as jnp
 
 from jax import jit
-from typing import List
+from typing import Tuple
 from tqdm.auto import tqdm
 
-from .wfa import Wfa
-from .ps_basis import PrefixSuffixBasis, KBasis
-
+from .ps_basis import PrefixSuffixBasis
 
 @jit
 def pseudo_inverse(M):
@@ -94,51 +92,30 @@ def spectral_learning(hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.
     return alpha, A, omega
 
 
-class SpectralLearning():
+def hankel_blocks_for_function(f, basis : PrefixSuffixBasis) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Spectral learning algorithm:
-
-    - generate a base made of words with maximum lenght
-    - build the Hankel matrix for the function f
-    - perform SVD factorization
-    - reconstruct the WFA
+    Evaluate Hankel blocks for function
     """
+    p = len(basis.prefixes())
+    a = len(basis.alphabet())
+    s = len(basis.suffixes())
 
-    def __init__(self, alphabet : List[str], learn_resolution : int):
-        """
-        Initialize spectral learning with alphabet and prefix/suffix set
-        """
-        self.basis = KBasis(alphabet, learn_resolution)
+    # here we use numpy arrays because they are faster to update in place
+    hp = np.zeros((p,), dtype=np.float32)
+    H  = np.zeros((p,s), dtype=np.float32)
+    Hs = np.zeros((p,a,s), dtype=np.float32)
+    hs = np.zeros((s,), dtype=np.float32)
 
+    # compute Hankel blocks
+    for (u, u_i) in tqdm(basis.prefixes()):
+        hp[u_i] = f(u)
 
-    def learn(self, f):
-        """
-        Perform spectral learning and build WFA
-        """
-        p = len(self.basis.prefixes())
-        a = len(self.basis.alphabet())
-        s = len(self.basis.suffixes())
+        for (v, v_i) in basis.suffixes():
+            hs[v_i] = f(v)
 
-        # here we use numpy arrays because they are faster to update in place
-        hp = np.zeros((p,), dtype=np.float32)
-        H  = np.zeros((p,s), dtype=np.float32)
-        Hs = np.zeros((p,a,s), dtype=np.float32)
-        hs = np.zeros((s,), dtype=np.float32)
+            H[u_i, v_i] = f(u + v)
 
-        # compute Hankel blocks
-        for (u, u_i) in tqdm(self.basis.prefixes()):
-            hp[u_i] = f(u)
+            for (a, a_i) in basis.alphabet():
+                Hs[u_i, a_i, v_i] = f(u + a + v)
 
-            for (v, v_i) in self.basis.suffixes():
-                hs[v_i] = f(v)
-
-                H[u_i, v_i] = f(u + v)
-
-                for (a, a_i) in self.basis.alphabet():
-                    Hs[u_i, a_i, v_i] = f(u + a + v)
-
-        wfa = Wfa([x for x, _ in self.basis.alphabet()], 2)
-
-        wfa.alpha, wfa.A, wfa.omega = spectral_learning(hp, H, Hs, hs)
-
-        return wfa
+    return hp, H, Hs, hs
