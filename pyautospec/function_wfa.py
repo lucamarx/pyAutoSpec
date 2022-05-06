@@ -2,9 +2,9 @@
 Wfa based function compression algorithm
 """
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
 
 from .wfa import Wfa
+from .plots import function_wfa_comparison_chart
 from .spectral_learning import SpectralLearning
 
 
@@ -101,22 +101,4 @@ class FunctionWfa():
         """
         Compare the two functions
         """
-        xs = jnp.linspace(self.x0, self.x1, endpoint = False, num = n_points)
-
-        v0 = jnp.array([self.f(x) for x in xs])
-        v1 = jnp.array([self(x, resolution) for x in xs])
-
-        error = jnp.abs(v1 - v0)
-
-        plt.figure()
-
-        plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), jnp.average(error), jnp.max(error)))
-
-        plt.plot(xs, v0, label="original f")
-        plt.plot(xs, v1, label="f")
-
-        if plot_derivative:
-            v2 = jnp.array([self.prime(x, resolution) for x in xs])
-            plt.plot(xs, v2, label="f'")
-
-        plt.legend()
+        function_wfa_comparison_chart(self, n_points, resolution, plot_derivative)
