@@ -5,7 +5,8 @@ import jax.numpy as jnp
 
 from .wfa import Wfa
 from .plots import function_wfa_comparison_chart
-from .spectral_learning import SpectralLearning
+from .ps_basis import KBasis
+from .spectral_learning import hankel_blocks_for_function
 
 
 def word2real(s : str, x0 : float = 0.0, x1 : float = 1.0):
@@ -51,41 +52,36 @@ class FunctionWfa():
     Wfa based real function model
     """
 
-    def __init__(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_resolution : int = 3):
+    def __init__(self):
         """
         Intialize learn a model of a real function f: [x0,x1) → R
         """
-        self.f = f
+        self.f, self.x0, self.x1 = None, None, None
 
-        self.x0 = x0
-        self.x1 = x1
-
-        self.splrn = SpectralLearning(["0", "1"], learn_resolution)
-        self.model = self.splrn.learn(lambda w: self.f(word2real(w, x0=x0, x1=x1)))
-        self.deriv = wfa_derivative(self.model, x0, x1)
+        self.model = Wfa(["0", "1"], 2)
 
 
     def __repr__(self):
-        return "WFA(states={}) {}: [{:.2f},{:.2f}] → R".format(len(self.model), self.f.__repr__(), self.x0, self.x1)
-
-
-    def w2r(self, w : str):
-        """
-        Convert binary representation to real number
-        """
-        return word2real(w, x0=self.x0, x1=self.x1)
-
-
-    def r2w(self, r : float, l : int = 6):
-        """
-        Convert real number to its binary representation
-        """
-        return real2word(r, x0=self.x0, x1=self.x1, l=l)
+        if self.f is None:
+            return "  FunctionWfa(N={}) <?>: [<?>,<?>] → R\n{}".format(len(self.model), self.model.__repr__())
+        else:
+            return "  FunctionWfa(N={}) {}: [{:.2f},{:.2f}] → R\n{}".format(len(self.model), self.f.__repr__(), self.x0, self.x1, self.model.__repr__())
 
 
     def __call__(self, x : float, resolution : int = 12):
         """
         Evaluate learned function at x
+
+        Parameters:
+        -----------
+
+        x : float
+        a point in [x0,x1)
+
+        Returns:
+        --------
+
+        the value of the function at x
         """
         return self.model(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
 
@@ -125,3 +121,42 @@ class FunctionWfa():
         whether to plot the derivative
         """
         function_wfa_comparison_chart(self, n_points, resolution, plot_derivative)
+
+
+    def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_resolution : int = 3):
+        """
+        Fit the model to the function f defined on the interval [x0,x1)
+
+        Parameters:
+        -----------
+
+        f : function
+        the function to be fitted
+
+        x0 : float
+        x1 : float
+        the interval the function is defined on
+
+        learn_resolution : int
+        the length of the basis used to construct the Hankel blocks
+
+        Returns:
+        --------
+
+        The object itself
+        """
+        if x1 <= x0:
+            raise Exception("x0 must be less than x1")
+
+        self.f = f
+        self.x0 = x0
+        self.x1 = x1
+
+        basis = KBasis(["0", "1"], learn_resolution)
+
+        hp, H, Hs, hs = hankel_blocks_for_function(lambda w: f(word2real(w, x0=x0, x1=x1)), basis)
+
+        self.model.fit(hp, H, Hs, hs)
+        self.deriv = wfa_derivative(self.model, x0, x1)
+
+        return self
