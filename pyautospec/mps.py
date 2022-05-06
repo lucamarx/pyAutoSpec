@@ -338,6 +338,17 @@ class Mps:
 
         raise Exception("invalid direction")
 
+    def bond_dimension(self) -> Tuple[int, int]:
+        """
+        Return the bond dimension
+
+        Returns:
+        --------
+
+        A tuple (final bond dimension, max bond dimension)
+        """
+        return self._get(self.N // 2).shape[2], self.max_bond_d
+
 
     def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
         """
@@ -521,6 +532,18 @@ class SymbolicMps():
         the values of the tensor
         """
         return self.mps(self._one_hot(X))
+
+
+    def bond_dimension(self) -> Tuple[int, int]:
+        """
+        Return the bond dimension
+
+        Returns:
+        --------
+
+        A tuple (final bond dimension, max bond dimension)
+        """
+        return self.mps.bond_dimension()
 
 
     def fit(self, X : List[List[int]], y : List[float], learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
