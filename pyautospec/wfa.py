@@ -168,3 +168,29 @@ class Wfa:
         Plot weight contributions
         """
         transition_plot(self, X, threshold)
+
+
+class SpectralLearning():
+    """
+    Spectral learning algorithm:
+
+    - generate a base made of words with maximum length
+    - build the Hankel matrix for the function f
+    - perform SVD factorization
+    - reconstruct the WFA
+    """
+
+    def __init__(self, alphabet : List[str], learn_resolution : int):
+        """
+        Initialize spectral learning with alphabet and prefix/suffix set
+        """
+        self.basis = KBasis(alphabet, learn_resolution)
+
+
+    def learn(self, f):
+        """
+        Perform spectral learning and build WFA
+        """
+        hp, H, Hs, hs = hankel_blocks_for_function(f, self.basis)
+
+        return Wfa([x for x, _ in self.basis.alphabet()], 2).fit(hp, H, Hs, hs)
