@@ -39,20 +39,22 @@ class FunctionMps():
     Mps based real function model
     """
 
-    def __init__(self, f, x0 : float = 0.0, x1 : float = 1.0, sequence_length : int = 8, max_bond_dim : int = 20):
+    def __init__(self, sequence_length : int = 8, max_bond_dim : int = 20):
         """
         Intialize a model of a real function f: [x0,x1) → R
-        """
-        self.f = f
 
-        self.x0 = x0
-        self.x1 = x1
+        Parameters:
+        -----------
+
+        sequence_length : int
+        the underlying MPS length
+
+        max_bond_dim : int
+        the underlying MPS maximum bond dimension
+        """
+        self.f, self.x0, self.x1 = None, None, None
 
         self.model = SymbolicMps(sequence_length, 2, max_bond_dim)
-
-        data = [(list(x), f(word2real(list(x), x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * sequence_length))]
-
-        self.model.fit([t[0] for t in data], [t[1] for t in data], learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
 
     def __repr__(self):
@@ -94,3 +96,42 @@ class FunctionMps():
         plt.plot(xs, v1, label="f")
 
         plt.legend()
+
+
+    def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+        """
+        Fit the model to the function f defined on the interval [x0,x1)
+
+        Parameters:
+        -----------
+
+        f : function
+        the function to be fitted
+
+        x0 : float
+        x1 : float
+        the interval the function is defined on
+
+        learn_rate : float
+        the learning rate
+
+        batch_size : int
+        the batch size used at each step
+
+        epochs : int
+        the number of epochs
+
+        Returns:
+        --------
+
+        The object itself
+        """
+        self.f = f
+        self.x0 = x0
+        self.x1 = x1
+
+        data = [(list(x), f(word2real(list(x), x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * len(self.model)))]
+
+        self.model.fit([t[0] for t in data], [t[1] for t in data], learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+
+        return self
