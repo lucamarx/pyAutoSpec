@@ -2,12 +2,16 @@
 Weighted finite automaton implemented as a matrix product state
 """
 import graphviz
+import numpy as np
 import jax.numpy as jnp
 
 from jax import jit
 from typing import List
+from tqdm.auto import tqdm
 
 from .plots import transition_plot
+from .ps_basis import KBasis
+from .spectral_learning import spectral_learning, hankel_blocks_for_function
 
 
 @jit
@@ -100,6 +104,26 @@ class Wfa:
         Evaluate WFA over word X
         """
         return evaluate(self.alpha, self.A, self.omega, [self.alphabet_map[a] for a in X]).item()
+
+
+    def fit(self, hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray):
+        """
+        Learn WFA from Hankel blocks using spectral learning
+
+        Parameters:
+        -----------
+
+        hp : np.ndarray
+
+        H  : np.ndarray
+
+        Hs : np.ndarray
+
+        hs : np.ndarray
+        """
+        self.alpha, self.A, self.omega = spectral_learning(hp, H, Hs, hs)
+
+        return self
 
 
     def diagram(self, title : str = "WFA"):
