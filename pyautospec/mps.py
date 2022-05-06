@@ -56,21 +56,21 @@ class Mps:
         # make mps left canonical
         for n in range(self.N-1):
             if n > 0:
-                m = self._get(n).reshape((self.part_d*bond_d, bond_d))
+                m = self[n].reshape((self.part_d*bond_d, bond_d))
             else:
-                m = self._get(n)
+                m = self[n]
 
             u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
             if n > 0:
-                self._set(n, u.reshape((bond_d, self.part_d, bond_d)))
+                self[n] = u.reshape((bond_d, self.part_d, bond_d))
             else:
-                self._set(n, u)
+                self[n] = u
 
             if n < N-2:
-                self._set(n+1, np.einsum("i,ij,jqk->iqk", s, v, self._get(n+1)))
+                self[n+1] = np.einsum("i,ij,jqk->iqk", s, v, self[n+1])
             else:
-                self._set(n+1, np.einsum("i,ij,jq->iq", s, v, self._get(n+1)))
+                self[n+1] = np.einsum("i,ij,jq->iq", s, v, self[n+1])
 
 
     def __repr__(self) -> str:
@@ -91,14 +91,14 @@ class Mps:
         return self.N
 
 
-    def _get(self, n : int) -> np.ndarray:
+    def __getitem__(self, n : int) -> np.ndarray:
         """
         Get matrix at site n
         """
         return self.mps[n]
 
 
-    def _set(self, n : int, m : np.ndarray):
+    def __setitem__(self, n : int, m : np.ndarray):
         """
         Set matrix at site n truncating exceeding bond dimensions
         """
@@ -121,7 +121,7 @@ class Mps:
 
         A tuple (final bond dimension, max bond dimension)
         """
-        return self._get(self.N // 2).shape[2], self.max_bond_d
+        return self[self.N // 2].shape[2], self.max_bond_d
 
 
     def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
@@ -157,11 +157,11 @@ class Mps:
         if X.shape[1] < self.N:
             raise Exception("X is too short")
 
-        T = np.einsum("bp,pj->bj", X[:,0,:], self._get(0))
+        T = np.einsum("bp,pj->bj", X[:,0,:], self[0])
         for n in range(1,self.N-1):
-            T = np.einsum("bi,bp,ipj->bj", T, X[:,n,:], self._get(n))
+            T = np.einsum("bi,bp,ipj->bj", T, X[:,n,:], self[n])
 
-        T = np.einsum("bi,bp,ip->b", T, X[:,self.N-1,:], self._get(self.N-1))
+        T = np.einsum("bi,bp,ip->b", T, X[:,self.N-1,:], self[self.N-1])
 
         return T
 

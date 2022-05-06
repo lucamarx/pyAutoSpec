@@ -16,9 +16,9 @@ class ContractionCache():
         self.mps = mps
         self.cache = [None] * len(mps)
 
-        self.cache[0] = np.einsum("bp,pj->bj", X[:, 0, :], mps._get(0))
+        self.cache[0] = np.einsum("bp,pj->bj", X[:, 0, :], mps[0])
         for n in range(1, mps.N-1):
-            self.cache[n] = np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], mps._get(n))
+            self.cache[n] = np.einsum("bi,bp,ipj->bj", self.cache[n-1], X[:, n, :], mps[n])
 
 
     def __len__(self):
@@ -60,13 +60,13 @@ def _merge(mps, k : int) -> np.ndarray:
      └─┬─┘ └─┬─┘     └┬──┬┘
     """
     if 0 < k and k+1 < mps.N-1:
-        return np.einsum("ipj,jqk->ipqk", mps._get(k), mps._get(k+1))
+        return np.einsum("ipj,jqk->ipqk", mps[k], mps[k+1])
 
     if k == 0:
-        return np.einsum("pj,jqk->pqk", mps._get(0), mps._get(1))
+        return np.einsum("pj,jqk->pqk", mps[0], mps[1])
 
     if k+1 == mps.N-1:
-        return np.einsum("ipj,jq->ipq", mps._get(mps.N-2), mps._get(mps.N-1))
+        return np.einsum("ipj,jq->ipq", mps[mps.N-2], mps[mps.N-1])
 
     raise Exception("invalid k")
 
@@ -143,9 +143,9 @@ def _contract_left(mps, k : int, X :np.ndarray) -> np.ndarray:
     └─┬─┘ └─┬─┘       └─┬─┘
       ◯     ◯           ◯
     """
-    L = np.einsum("bp,pj->bj", X[:,0,:], mps._get(0))
+    L = np.einsum("bp,pj->bj", X[:,0,:], mps[0])
     for n in range(1,k+1):
-        L = np.einsum("bi,bp,ipj->bj", L, X[:,n,:], mps._get(n))
+        L = np.einsum("bi,bp,ipj->bj", L, X[:,n,:], mps[n])
     return L
 
 
@@ -158,9 +158,9 @@ def _contract_right(mps, k : int, X : np.ndarray) -> np.ndarray:
      └─┬─┘       └─┬─┘ └─┬─┘
        ◯           ◯     ◯
     """
-    R = np.einsum("ip,bp->bi", mps._get(mps.N-1), X[:,mps.N-1,:])
+    R = np.einsum("ip,bp->bi", mps[mps.N-1], X[:,mps.N-1,:])
     for n in reversed(range(k,mps.N-1)):
-        R = np.einsum("ipj,bp,bj->bi", mps._get(n), X[:,n,:], R)
+        R = np.einsum("ipj,bp,bj->bi", mps[n], X[:,n,:], R)
     return R
 
 
@@ -192,8 +192,8 @@ def _gradient(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionC
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
 
         # avoid mps re-evaluation
-        w = np.einsum("ipj,bp,bj->bi", mps._get(1), X[:,k+1,:], R)
-        v = np.einsum("pi,bp,bi->b", mps._get(0), X[:,k,:], w)
+        w = np.einsum("ipj,bp,bj->bi", mps[1], X[:,k+1,:], R)
+        v = np.einsum("pi,bp,bi->b", mps[0], X[:,k,:], w)
 
         # perform tensor products
         d = np.einsum("bp,bq,bi,b->pqi", X[:,k,:], X[:,k+1,:], R, (v - y))
@@ -202,18 +202,18 @@ def _gradient(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionC
         L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
 
         # avoid mps re-evaluation
-        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps._get(k))
-        v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], mps._get(k+1))
+        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
+        v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], mps[k+1])
 
         # perform tensor products
         d = np.einsum("bi,bp,bq,b->ipq", L, X[:,k,:], X[:,k+1,:], (v - y))
 
     elif 0 < k and k < (mps.N-2):
         L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
-        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps._get(k))
+        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
 
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
-        w = np.einsum("ipj,bp,bj->bi", mps._get(k+1), X[:,k+1,:], R)
+        w = np.einsum("ipj,bp,bj->bi", mps[k+1], X[:,k+1,:], R)
 
         # avoid mps re evaluation
         v = np.einsum("bi,bi->b", u, w)
@@ -238,22 +238,22 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
 
     A1, A2 = _split(mps, n, B, left=(direction == "left2right"))
 
-    mps._set(n, A1)
-    mps._set(n+1, A2)
+    mps[n]   = A1
+    mps[n+1] = A2
 
     if direction == "right2left" and cache is not None:
         if n+1 == mps.N-1:
-            cache[n+1] = np.einsum("ip,bp->bi", mps._get(n+1), X[:, n+1, :])
+            cache[n+1] = np.einsum("ip,bp->bi", mps[n+1], X[:, n+1, :])
         else:
-            cache[n+1] = np.einsum("ipj,bp,bj->bi", mps._get(n+1), X[:, n+1, :], cache[n+2])
+            cache[n+1] = np.einsum("ipj,bp,bj->bi", mps[n+1], X[:, n+1, :], cache[n+2])
 
         return n-1
 
     if direction == "left2right" and cache is not None:
         if n == 0:
-            cache[n] = np.einsum("bp,pi->bi", X[:, n, :], mps._get(n))
+            cache[n] = np.einsum("bp,pi->bi", X[:, n, :], mps[n])
         else:
-            cache[n] = np.einsum("bi,bp,ipj->bj", cache[n-1], X[:, n, :], mps._get(n))
+            cache[n] = np.einsum("bi,bp,ipj->bj", cache[n-1], X[:, n, :], mps[n])
 
         return n+1
 
