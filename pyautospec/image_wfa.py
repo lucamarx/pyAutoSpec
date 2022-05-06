@@ -6,7 +6,8 @@ import numpy as np
 
 from tqdm.auto import tqdm
 from skimage import color
-from .spectral_learning import SpectralLearning
+
+from .wfa import SpectralLearning
 
 
 def decode(w : str, tl=(0, 0), sz=100):
