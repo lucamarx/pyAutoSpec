@@ -57,8 +57,11 @@ class FunctionMps():
         self.model = SymbolicMps(sequence_length, 2, max_bond_dim)
 
 
-    def __repr__(self):
-        return "MPS(N={}) {}: [{:.2f},{:.2f}] → R".format(self.model.mps.N, self.f.__repr__(), self.x0, self.x1)
+    def __repr__(self) -> str:
+        if self.f is None:
+            return "  FunctionMps(N={}) <?>: [<?>,<?>] → R\n{}".format(len(self.model), self.model.__repr__())
+        else:
+            return "  FunctionMps(N={}) {}: [{:.2f},{:.2f}] → R\n{}".format(len(self.model), self.f.__repr__(), self.x0, self.x1, self.model.__repr__())
 
 
     def __call__(self, x : float) -> float:

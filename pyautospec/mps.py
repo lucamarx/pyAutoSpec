@@ -78,9 +78,16 @@ class Mps:
   │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
   └─┬─┘ └─┬─┘       └─┬─┘
 
-  particle dim:  {}
-  max bond dim:  {}
-        """.format(self.N, self.part_d, self.max_bond_d)
+  particle dim: {:3d}
+      bond dim: {:3d} (max: {:d})
+        """.format(self.N, self.part_d, *self.bond_dimension())
+
+
+    def __len__(self) -> int:
+        """
+        The number of matrices in the chain
+        """
+        return self.N
 
 
     def _get(self, n : int) -> np.ndarray:
@@ -473,9 +480,16 @@ class SymbolicMps():
   │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
   └─┬─┘ └─┬─┘       └─┬─┘
 
-  alphabet size:  {}
-   max bond dim:  {}
-        """.format(self.mps.N, self.mps.part_d, self.mps.max_bond_d)
+  alphabet size: {:3d}
+       bond dim: {:3d} (max: {})
+        """.format(len(self.mps), self.mps.part_d, *self.mps.bond_dimension())
+
+
+    def __len__(self) -> int:
+        """
+        The number of matrices in the chain
+        """
+        return len(self.mps)
 
 
     def _one_hot(self, X : List[List[int]]) -> np.ndarray:
