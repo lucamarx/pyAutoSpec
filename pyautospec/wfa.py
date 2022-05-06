@@ -38,7 +38,14 @@ class Wfa:
 
 
     def __repr__(self):
-        return "WFA(states={})".format(len(self))
+        return """
+  ╭───┐       ╭───┐       ╭───┐
+  │ α ├─ ... ─┤ A ├─ ... ─┤ ω │
+  └─┬─┘       └─┬─┘       └─┬─┘
+
+         states: {:3d}
+  alphabet size: {:3d}
+        """.format(len(self), len(self.alphabet_map))
 
 
     def __len__(self):
