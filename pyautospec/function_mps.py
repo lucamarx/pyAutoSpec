@@ -1,12 +1,12 @@
 """
 Mps based function compression algorithm
 """
-import numpy as np
 import itertools
-import matplotlib.pyplot as plt
 
 from typing import List
+
 from .mps import SymbolicMps
+from .plots import function_wfa_comparison_chart
 
 
 def word2real(s : List[int], x0 : float = 0.0, x1 : float = 1.0) -> float:
@@ -82,25 +82,20 @@ class FunctionMps():
         return self.model([real2word(x, l=self.model.mps.N, x0=self.x0, x1=self.x1)])[0]
 
 
-    def comparison_chart(self, n_points : int = 50):
+    def comparison_chart(self, n_points : int = 50, resolution : int = 12):
         """
         Compare the two functions
+
+        Parameters:
+        -----------
+
+        n_points : int
+        the number of points in the plot
+
+        resolution : int
+        the word length used to encode x's values
         """
-        xs = np.linspace(self.x0, self.x1, endpoint = False, num = n_points)
-
-        v0 = np.array([self.f(x) for x in xs])
-        v1 = np.array([self(x) for x in xs])
-
-        error = np.abs(v1 - v0)
-
-        plt.figure()
-
-        plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(self.f.__repr__(), np.average(error), np.max(error)))
-
-        plt.plot(xs, v0, label="original f")
-        plt.plot(xs, v1, label="f")
-
-        plt.legend()
+        function_wfa_comparison_chart(self, n_points, resolution, plot_derivative = False)
 
 
     def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
