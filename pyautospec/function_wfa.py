@@ -93,6 +93,17 @@ class FunctionWfa():
     def prime(self, x : float, resolution : int = 12):
         """
         Evaluate derivative at x
+
+        Parameters:
+        -----------
+
+        x : float
+        a point in [x0,x1)
+
+        Returns:
+        --------
+
+        the value of the derivative of the function at x
         """
         return self.deriv(real2word(x, l=resolution, x0=self.x0, x1=self.x1))
 
@@ -100,5 +111,17 @@ class FunctionWfa():
     def comparison_chart(self, n_points : int = 50, resolution : int = 12, plot_derivative : bool = False):
         """
         Compare the two functions
+
+        Parameters:
+        -----------
+
+        n_points : int
+        the number of points in the plot
+
+        resolution : int
+        the word length used to encode x's values
+
+        plot_derivative : bool
+        whether to plot the derivative
         """
         function_wfa_comparison_chart(self, n_points, resolution, plot_derivative)
