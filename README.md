@@ -64,7 +64,7 @@ from math import sin, pi
 from pyautospec import FunctionWfa
 
 # learn the sin function in the [0,2π] interval
-sin_aut = FunctionWfa(sin, x0=0.0, x1=2*pi, learn_resolution=2)
+sin_aut = FunctionWfa().fit(sin, x0=0.0, x1=2*pi, learn_resolution=2)
 ```
 
 see the [Trigonometric Functions](<https://github.com/lucamarx/pyAutoSpec/blob/main/examples/Trigonometric Functions.ipynb>) example.
