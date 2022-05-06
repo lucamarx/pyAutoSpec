@@ -1,14 +1,15 @@
 """
 Implement spectral learning algorithm
 """
-import itertools
 import numpy as np
 import jax.numpy as jnp
+
+from jax import jit
 from typing import List
 from tqdm.auto import tqdm
-from jax import jit
 
 from .wfa import Wfa
+from .ps_basis import PrefixSuffixBasis, KBasis
 
 
 @jit
@@ -34,6 +35,49 @@ def pseudo_inverse(M):
     return jnp.dot(jnp.dot(jnp.transpose(Vt), Sinv), jnp.transpose(U))
 
 
+def spectral_learning(hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : int = None) -> Wfa:
+    """
+    Perform spectral learning of Hankel blocks and build WFA truncating
+    SVD expansion to n_states (if specified).
+    """
+    # convert to jax arrays
+    hp = jnp.array(hp)
+    H  = jnp.array(H)
+    Hs = jnp.array(Hs)
+    hs = jnp.array(hs)
+
+    # compute full-rank factorization H = P·S
+    U, D, V = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
+
+    # truncate expansion
+    rank = jnp.linalg.matrix_rank(H)
+
+    if n_states is not None and n_states < rank:
+        rank = n_states
+
+    U, D, V = U[:,0:rank], D[0:rank], V[0:rank,:]
+    D_sqrt = jnp.sqrt(D)
+
+    print("Singular values: {}".format(D))
+
+    P = jnp.einsum("ij,j->ij", U, D_sqrt)
+    S = jnp.einsum("i,ij->ij", D_sqrt, V)
+
+    # compute pseudo inverses
+    Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
+
+    # α = h·S†
+    alpha = jnp.dot(hs, Sd)
+
+    # A = P†·Hσ·S†
+    A = jnp.einsum("pi,iaj,jq->paq", Pd, Hs, Sd)
+
+    # ω = P†·h
+    omega = jnp.dot(Pd, hp)
+
+    return alpha, A, omega
+
+
 class SpectralLearning():
     """
     Spectral learning algorithm:
@@ -44,72 +88,41 @@ class SpectralLearning():
     - reconstruct the WFA
     """
 
-    def __init__(self, alphabet : List[str], prefix_suffix_length : int):
+    def __init__(self, alphabet : List[str], learn_resolution : int):
         """
         Initialize spectral learning with alphabet and prefix/suffix set
         """
-        self.alphabet = alphabet
-        self.alphabet_index = {alphabet[i]: i for i in range(0, len(alphabet))}
-
-        # the prefix/suffix set is made of words with a maximum length
-        prefix_suffix_set = [""]
-        for l in range(1, prefix_suffix_length+1):
-            prefix_suffix_set.extend([''.join(w) for w in itertools.product(*([alphabet] * l))])
-
-        self.prefix_index = {prefix_suffix_set[i]: i for i in range(0, len(prefix_suffix_set))}
+        self.basis = KBasis(alphabet, learn_resolution)
 
 
     def learn(self, f):
         """
         Perform spectral learning and build WFA
         """
-        d = len(self.prefix_index)
-        a = len(self.alphabet_index)
+        p = len(self.basis.prefixes())
+        a = len(self.basis.alphabet())
+        s = len(self.basis.suffixes())
 
         # here we use numpy arrays because they are faster to update in place
-        h  = np.zeros((d,), dtype=np.float32)
-        H  = np.zeros((d,d), dtype=np.float32)
-        Hs = np.zeros((d,a,d), dtype=np.float32)
+        hp = np.zeros((p,), dtype=np.float32)
+        H  = np.zeros((p,s), dtype=np.float32)
+        Hs = np.zeros((p,a,s), dtype=np.float32)
+        hs = np.zeros((s,), dtype=np.float32)
 
         # compute Hankel blocks
-        for (u, u_i) in tqdm(self.prefix_index.items()):
-            h[u_i] = f(u)
+        for (u, u_i) in tqdm(self.basis.prefixes()):
+            hp[u_i] = f(u)
 
-            for (v, v_i) in self.prefix_index.items():
+            for (v, v_i) in self.basis.suffixes():
+                hs[v_i] = f(v)
+
                 H[u_i, v_i] = f(u + v)
 
-                for (a, a_i) in self.alphabet_index.items():
+                for (a, a_i) in self.basis.alphabet():
                     Hs[u_i, a_i, v_i] = f(u + a + v)
 
-        # convert to jax arrays
-        h  = jnp.array(h)
-        H  = jnp.array(H)
-        Hs = jnp.array(Hs)
+        wfa = Wfa([x for x, _ in self.basis.alphabet()], 2)
 
-        # compute full-rank factorization H = P·S
-        U, D, V = jnp.linalg.svd(H, full_matrices=True, compute_uv=True)
-
-        # truncate expansion
-        rank = jnp.linalg.matrix_rank(H)
-        U, D, V = U[:,0:rank], D[0:rank], V[0:rank,:]
-        D_sqrt = jnp.sqrt(D)
-
-        P = jnp.einsum("ij,j->ij", U, D_sqrt)
-        S = jnp.einsum("i,ij->ij", D_sqrt, V)
-
-        # compute pseudo inverses
-        Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
-
-        # compute WFA parameters
-        wfa = Wfa(self.alphabet, rank)
-
-        # α = h·S†
-        wfa.alpha = jnp.dot(h, Sd)
-
-        # A = P†·Hσ·S†
-        wfa.A = jnp.einsum("pi,iaj,jq->paq", Pd, Hs, Sd)
-
-        # ω = P†·h
-        wfa.omega = jnp.dot(Pd, h)
+        wfa.alpha, wfa.A, wfa.omega = spectral_learning(hp, H, Hs, hs)
 
         return wfa
