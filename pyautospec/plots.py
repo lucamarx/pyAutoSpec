@@ -92,7 +92,10 @@ def function_wfa_comparison_chart(wfa, n_points : int = 50, resolution : int = 1
     xs = jnp.linspace(wfa.x0, wfa.x1, endpoint = False, num = n_points)
 
     v0 = jnp.array([wfa.f(x) for x in xs])
-    v1 = jnp.array([wfa(x, resolution) for x in xs])
+    if resolution is None:
+        v1 = jnp.array([wfa(x) for x in xs])
+    else:
+        v1 = jnp.array([wfa(x, resolution) for x in xs])
 
     error = jnp.abs(v1 - v0)
 

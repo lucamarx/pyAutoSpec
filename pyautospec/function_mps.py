@@ -82,7 +82,7 @@ class FunctionMps():
         return self.model([real2word(x, l=self.model.mps.N, x0=self.x0, x1=self.x1)])[0]
 
 
-    def comparison_chart(self, n_points : int = 50, resolution : int = 12):
+    def comparison_chart(self, n_points : int = 50):
         """
         Compare the two functions
 
@@ -91,11 +91,8 @@ class FunctionMps():
 
         n_points : int
         the number of points in the plot
-
-        resolution : int
-        the word length used to encode x's values
         """
-        function_wfa_comparison_chart(self, n_points, resolution, plot_derivative = False)
+        function_wfa_comparison_chart(self, n_points, None, plot_derivative = False)
 
 
     def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
