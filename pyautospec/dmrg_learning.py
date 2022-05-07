@@ -54,7 +54,7 @@ def _squared_norm(mps) -> float:
     return T.item()
 
 
-def _log_likelihood_samples(mps, X : np.ndarray) -> float:
+def _log_likelihood_samples(mps, X : np.ndarray) -> np.ndarray:
     """
     Compute log-likelihood of each sample (assume mps is normalized)
     """
@@ -473,7 +473,7 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
             # right to left pass
             n = mps.N-2
             while True:
-                n = _move_pivot(mps, X_batch, None, n, "right2left", cache=cache)
+                n = _move_pivot(mps, X_batch, None, n, learn_rate, "right2left", cache=cache)
                 if n == -1:
                     break
 
@@ -485,7 +485,7 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
             # left to right pass
             n = 0
             while True:
-                n = _move_pivot(mps, X_batch, None, n, "left2right", cache=cache)
+                n = _move_pivot(mps, X_batch, None, n, learn_rate, "left2right", cache=cache)
                 if n == mps.N-1:
                     break
 
