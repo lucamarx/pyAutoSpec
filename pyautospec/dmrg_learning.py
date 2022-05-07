@@ -395,6 +395,9 @@ def _fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.
     if len(X.shape) != 3:
         raise Exception("invalid data")
 
+    if X.shape[0] != y.shape[0]:
+        raise Exception("invalid shape for X,y (wrong sample number)")
+
     if X.shape[1] != mps.N:
         raise Exception("invalid shape for X (wrong particle number)")
 
