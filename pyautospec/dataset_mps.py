@@ -48,7 +48,7 @@ class DatasetMps():
 
 
     def __repr__(self) -> str:
-        return "  DatasetMps({})\n{}".format(len(self.models), self.model.__repr__())
+        return "  DatasetMps({})\n{}".format(len(self.models), self.models[0].__repr__())
 
 
     def __call__(self, X : np.ndarray) -> int:

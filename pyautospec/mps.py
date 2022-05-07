@@ -5,7 +5,7 @@ import numpy as np
 
 from typing import List, Tuple
 
-from .dmrg_learning import _cost, _log_likelihood_sample, _squared_norm, _fit_regression, _fit_classification
+from .dmrg_learning import _cost, _log_likelihood_samples, _squared_norm, _fit_regression, _fit_classification
 
 
 class Mps:
@@ -244,7 +244,7 @@ class MpsC(Mps):
         """
         Compute cost function
         """
-        return _log_likelihood_sample(self, X)
+        return _log_likelihood_samples(self, X)
 
 
     def fit(self, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
