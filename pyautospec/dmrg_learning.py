@@ -487,8 +487,8 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
                     break
 
             # normalize
-            t = mps[self.N-1]
+            t = mps[mps.N-1]
             norm = np.sqrt(np.einsum("ip,ip->", t, t))
-            mps[self.N-1] = t / norm
+            mps[mps.N-1] = t / norm
 
         print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_log_likelihood(mps, X)))
