@@ -124,13 +124,6 @@ class Mps:
         return self[self.N // 2].shape[2], self.max_bond_d
 
 
-    def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
-        """
-        Compute cost function
-        """
-        return _cost(self, X, y)
-
-
     def __call__(self, X : np.ndarray) -> np.ndarray:
         """
         Evaluate MPS on batch X[b,n,p]
@@ -164,6 +157,18 @@ class Mps:
         T = np.einsum("bi,bp,ip->b", T, X[:,self.N-1,:], self[self.N-1])
 
         return T
+
+
+class MpsR(Mps):
+    """
+    Mps for regression
+    """
+
+    def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
+        """
+        Compute cost function
+        """
+        return _cost(self, X, y)
 
 
     def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
@@ -200,6 +205,7 @@ class Mps:
         return self
 
 
+
 class SymbolicMps():
     """
     A symbolic matrix product state operate on fixed length sequences of
@@ -224,7 +230,7 @@ class SymbolicMps():
         max_bond_d: int
         maximum bond dimension
         """
-        self.mps = Mps(N, alphabet, max_bond_d)
+        self.mps = MpsR(N, alphabet, max_bond_d)
 
 
     def __repr__(self) -> str:
