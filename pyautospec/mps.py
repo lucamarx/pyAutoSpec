@@ -5,7 +5,7 @@ import numpy as np
 
 from typing import List, Tuple
 
-from .dmrg_learning import _cost, _fit_regression
+from .dmrg_learning import _cost, _log_likelihood_sample, _squared_norm, _fit_regression, _fit_classification
 
 
 class Mps:
@@ -71,17 +71,6 @@ class Mps:
                 self[n+1] = np.einsum("i,ij,jqk->iqk", s, v, self[n+1])
             else:
                 self[n+1] = np.einsum("i,ij,jq->iq", s, v, self[n+1])
-
-
-    def __repr__(self) -> str:
-        return """
-  ╭───┐ ╭───┐       ╭───┐
-  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
-  └─┬─┘ └─┬─┘       └─┬─┘
-
-  particle dim: {:3d}
-      bond dim: {:3d} (max: {:d})
-        """.format(self.N, self.part_d, *self.bond_dimension())
 
 
     def __len__(self) -> int:
@@ -164,6 +153,17 @@ class MpsR(Mps):
     Mps for regression
     """
 
+    def __repr__(self) -> str:
+        return """
+  ╭───┐ ╭───┐       ╭───┐
+  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
+  └─┬─┘ └─┬─┘       └─┬─┘
+
+  particle dim: {:3d}
+      bond dim: {:3d} (max: {:d})
+        """.format(self.N, self.part_d, *self.bond_dimension())
+
+
     def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
         """
         Compute cost function
@@ -204,6 +204,78 @@ class MpsR(Mps):
 
         return self
 
+
+class MpsC(Mps):
+    """
+    Mps for classification
+    """
+
+    def __init__(self, N : int, part_d : int = 2, max_bond_d : int = 20):
+        super().__init__(N, part_d, max_bond_d)
+
+        # normalize
+        t = self[self.N-1]
+        norm = np.sqrt(np.einsum("pi,pi->", t, t))
+        self[self.N-1] = t / norm
+
+
+    def __repr__(self) -> str:
+        norm = np.sqrt(np.einsum("pi,pi->", self[self.N-1], self[self.N-1]))
+
+        return """
+  ╭───┐ ╭───┐       ╭───┐
+  │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
+  └─┬─┘ └─┬─┘       └─┬─┘
+
+          norm: {:.2f}
+  particle dim: {:3d}
+      bond dim: {:3d} (max: {:d})
+        """.format(self.N, norm, self.part_d, *self.bond_dimension())
+
+
+    def squared_norm(self) -> float:
+        """
+        Compute squared norm
+        """
+        return _squared_norm(self)
+
+
+    def log_likelihood(self, X : np.ndarray) -> np.ndarray:
+        """
+        Compute cost function
+        """
+        return _log_likelihood_sample(self, X)
+
+
+    def fit(self, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+        """
+        Fit the MPS to the data
+
+        0. for each epoch
+        1.  sample a random mini-batch from X
+        2.  sweep right → left (left → right)
+        3.   contract A^k and A^(k+1) into B^k
+        4.   evaluate gradients for mini-batch
+        5.   update B^k
+        6.   split B^k with SVD ensuring canonicalization
+        7.   move to next k
+
+        Parameters:
+        -----------
+        X : np.ndarray
+
+        learn_rate : float
+        learning rate
+
+        batch_size : int
+        batch size
+
+        epochs : int
+        number of epochs
+        """
+        _fit_classification(self, X, learn_rate, batch_size, epochs)
+
+        return self
 
 
 class SymbolicMps():
