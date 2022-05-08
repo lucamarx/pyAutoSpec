@@ -309,7 +309,7 @@ def _gradient_classification(mps, k : int, B : np.ndarray, X : np.ndarray, cache
         u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
 
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
-        w = np.einsum("ipj,bp,bj->bi", mps[+1], X[:,k+1,:], R)
+        w = np.einsum("ipj,bp,bj->bi", mps[k+1], X[:,k+1,:], R)
 
         # avoid mps re evaluation
         v = np.einsum("bi,bi->b", u, w)
@@ -497,4 +497,5 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
             norm = np.sqrt(np.einsum("ip,ip->", t, t))
             mps[mps.N-1] = t / norm
 
-        print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_log_likelihood(mps, X)))
+        if epoch % 10 == 0:
+            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_log_likelihood(mps, X)))
