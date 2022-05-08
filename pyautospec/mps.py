@@ -5,7 +5,7 @@ import numpy as np
 
 from typing import List, Tuple
 
-from .dmrg_learning import _cost, _log_likelihood_samples, _squared_norm, _fit_regression, _fit_classification
+from .dmrg_learning import cost, log_likelihood_samples, squared_norm, fit_regression, fit_classification
 
 
 class Mps:
@@ -168,7 +168,7 @@ class MpsR(Mps):
         """
         Compute cost function
         """
-        return _cost(self, X, y)
+        return cost(self, X, y)
 
 
     def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
@@ -200,7 +200,7 @@ class MpsR(Mps):
         epochs : int
         number of epochs
         """
-        _fit_regression(self, X, y, learn_rate, batch_size, epochs)
+        fit_regression(self, X, y, learn_rate, batch_size, epochs)
 
         return self
 
@@ -237,14 +237,14 @@ class MpsC(Mps):
         """
         Compute squared norm
         """
-        return _squared_norm(self)
+        return squared_norm(self)
 
 
     def log_likelihood(self, X : np.ndarray) -> np.ndarray:
         """
         Compute cost function
         """
-        return _log_likelihood_samples(self, X)
+        return log_likelihood_samples(self, X)
 
 
     def fit(self, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
@@ -273,7 +273,7 @@ class MpsC(Mps):
         epochs : int
         number of epochs
         """
-        _fit_classification(self, X, learn_rate, batch_size, epochs)
+        fit_classification(self, X, learn_rate, batch_size, epochs)
 
         return self
 

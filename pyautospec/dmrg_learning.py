@@ -33,7 +33,7 @@ class ContractionCache():
         self.cache[n] = v
 
 
-def _cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
+def cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
     """
     Compute cost function
     """
@@ -41,7 +41,7 @@ def _cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
     return np.min(c).item(), (np.sum(c).item() / X.shape[0]), np.max(c).item()
 
 
-def _squared_norm(mps) -> float:
+def squared_norm(mps) -> float:
     """
     Compute the squared norm of the MPS
     """
@@ -54,18 +54,18 @@ def _squared_norm(mps) -> float:
     return T.item()
 
 
-def _log_likelihood_samples(mps, X : np.ndarray) -> np.ndarray:
+def log_likelihood_samples(mps, X : np.ndarray) -> np.ndarray:
     """
     Compute log-likelihood of each sample (assume mps is normalized)
     """
     return -2 * np.log(abs(mps(X)))
 
 
-def _log_likelihood(mps, X : np.ndarray) -> Tuple[float, float, float]:
+def log_likelihood(mps, X : np.ndarray) -> Tuple[float, float, float]:
     """
     Min, max, average log-likelihood
     """
-    l = _log_likelihood_samples(mps, X)
+    l = log_likelihood_samples(mps, X)
     return np.min(l).item(), (np.sum(l).item() / X.shape[0]), np.max(l).item()
 
 
@@ -363,7 +363,7 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     raise Exception("invalid direction")
 
 
-def _fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+def fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
     """
     Fit the MPS to the data
 
@@ -426,10 +426,10 @@ def _fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.
                     break
 
         if epoch % 10 == 0:
-            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_cost(mps, X, y)))
+            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *cost(mps, X, y)))
 
 
-def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+def fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
     """
     Fit the MPS to the data
 
@@ -498,4 +498,4 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
             mps[mps.N-1] = t / norm
 
         if epoch % 10 == 0:
-            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *_log_likelihood(mps, X)))
+            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *log_likelihood(mps, X)))
