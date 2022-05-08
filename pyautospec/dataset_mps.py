@@ -3,9 +3,7 @@ Mps based function compression algorithm
 """
 import numpy as np
 
-from math import pi
-
-from .mps import MpsC
+from .mps import MpsR
 
 
 def vector2data(v : np.ndarray, x0 : float = 0.0, x1 : float = 1.0) -> np.ndarray:
@@ -15,7 +13,7 @@ def vector2data(v : np.ndarray, x0 : float = 0.0, x1 : float = 1.0) -> np.ndarra
 def data2vector(X : np.ndarray, x0 : float = 0.0, x1 : float = 1.0) -> np.ndarray:
     """
     """
-    theta = 2*pi * (X - x0) / (x1 - x0)
+    theta = 2*np.pi * (X - x0) / (x1 - x0)
     return np.dstack((np.cos(theta), np.sin(theta)))
 
 
@@ -44,7 +42,7 @@ class DatasetMps():
             raise Exception("x0 must be less than x1")
 
         self.x0, self.x1 = x0, x1
-        self.models = [MpsC(field_n, 2, max_bond_dim) for _ in range(class_n)]
+        self.models = [MpsR(field_n, 2, max_bond_dim) for _ in range(class_n)]
 
 
     def __repr__(self) -> str:
@@ -65,8 +63,8 @@ class DatasetMps():
 
         the estimated class
         """
-        l = np.dstack([m.log_likelihood(data2vector(X, x0=self.x0, x1=self.x1)) for m in self.models])
-        return np.argmax(l, 2)
+        l = np.dstack([np.abs(1.0 - m(data2vector(X, x0=self.x0, x1=self.x1))) for m in self.models])
+        return np.argmin(l, 2)
 
 
     def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
@@ -97,6 +95,6 @@ class DatasetMps():
             raise Exception("X and y have different sizes")
 
         for c in range(len(self.models)):
-            self.models[c].fit(data2vector(X[y == (c+1)], x0=self.x0, x1=self.x1), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+            self.models[c].fit(data2vector(X, x0=self.x0, x1=self.x1), (y == c).astype(int), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
