@@ -93,6 +93,9 @@ class DatasetMps():
 
         The object itself
         """
+        if X.shape[0] != y.shape[0]:
+            raise Exception("X and y have different sizes")
+
         for c in range(len(self.models)):
             self.models[c].fit(data2vector(X[y == (c+1)], x0=self.x0, x1=self.x1), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 

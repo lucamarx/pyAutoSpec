@@ -458,6 +458,9 @@ def _fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_siz
     if len(X.shape) != 3:
         raise Exception("invalid data")
 
+    if X.shape[0] == 0:
+        raise Exception("dataset is empty")
+
     if X.shape[1] != mps.N:
         raise Exception("invalid shape for X (wrong particle number)")
 
