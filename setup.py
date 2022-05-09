@@ -3,7 +3,7 @@ pyAutoSpec module setup
 """
 from setuptools import setup
 
-VERSION = "0.6.11"
+VERSION = "0.6.66"
 
 setup(
     name="pyAutoSpec",

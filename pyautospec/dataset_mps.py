@@ -137,3 +137,25 @@ class DatasetMps():
             self.regression_model.fit(data2vector(X, x0=self.x0, x1=self.x1), y, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
+
+
+    def score(self, X : np.ndarray, y : np.ndarray) -> float:
+        """
+        Model score on test data
+
+        Parameters:
+        -----------
+
+        X : np.ndarray
+        y : np.ndarray
+
+        Returns:
+        --------
+
+        the accuracy
+        """
+        if self.classification_model is not None:
+            t = self(X) - y
+            return np.average((t == 0).astype(int))
+        else:
+            return np.average(np.square(self(X) - y))
