@@ -77,7 +77,7 @@ class DatasetMps():
 
         if self.classification_model is not None:
             l = np.dstack([np.abs(1.0 - m(data2vector(X, x0=self.x0, x1=self.x1))) for m in self.classification_model])
-            return np.argmin(l, 2)
+            return np.argmin(l, 2).reshape((X.shape[0], ))
         else:
             return self.regression_model(data2vector(X, x0=self.x0, x1=self.x1))
 
