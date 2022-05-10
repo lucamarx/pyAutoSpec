@@ -1,18 +1,18 @@
 """
-Mps based function compression algorithm
+Mps based classification/regression
 """
 import numpy as np
 
-from .mps import MpsR
+from .mps import Mps
 
 
 def data2vector(X : np.ndarray, x0 : np.ndarray, x1 : np.ndarray) -> np.ndarray:
     """
     Convert data points into 2-dim vectors
     """
-    theta = 0.5 * np.pi * (X - x0) / (x1 - x0)
+    theta = (np.pi/2) * (X - x0) / (x1 - x0)
 
-    if np.any(theta < 0) or np.any(theta > 0.5*np.pi):
+    if np.any(theta < 0) or np.any(theta > np.pi/2):
         raise Exception("out of range")
 
     return np.dstack((np.cos(theta), np.sin(theta)))
@@ -51,16 +51,16 @@ class DatasetMps():
         self.x0, self.x1 = x0, x1
 
         if class_n is not None:
-            self.classification_model = [MpsR(field_n, 2, max_bond_dim) for _ in range(class_n)]
+            self.classification_model = [Mps(field_n, 2, max_bond_dim) for _ in range(class_n)]
             self.regression_model = None
         else:
-            self.regression_model = MpsR(field_n, 2, max_bond_dim)
+            self.regression_model = Mps(field_n, 2, max_bond_dim)
             self.classification_model = None
 
 
     def __repr__(self) -> str:
         if self.classification_model is not None:
-            return "  DatasetMps(classification)\n{}".format("\n".join([m.__repr__() for m in self.classification_model]))
+            return "  DatasetMps(classification)\n{}".format("\n".join(["class: {:3d} --------------".format(i) + model.__repr__() for (i, model) in enumerate(self.classification_model)]))
         else:
             return "  DatasetMps(regression)\n{}".format(self.regression_model)
 
