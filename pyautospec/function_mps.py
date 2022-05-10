@@ -1,11 +1,12 @@
 """
 Mps based function compression algorithm
 """
+import numpy as np
 import itertools
 
 from typing import List
 
-from .mps import SymbolicMps
+from .mps import Mps
 from .plots import function_wfa_comparison_chart
 
 
@@ -54,7 +55,7 @@ class FunctionMps():
         """
         self.f, self.x0, self.x1 = None, None, None
 
-        self.model = SymbolicMps(sequence_length, 2, max_bond_dim)
+        self.model = Mps(sequence_length, 2, max_bond_dim)
 
 
     def __repr__(self) -> str:
@@ -62,6 +63,14 @@ class FunctionMps():
             return "  FunctionMps(N={}) <?>: [<?>,<?>] → R\n{}".format(len(self.model), self.model.__repr__())
         else:
             return "  FunctionMps(N={}) {}: [{:.2f},{:.2f}] → R\n{}".format(len(self.model), self.f.__repr__(), self.x0, self.x1, self.model.__repr__())
+
+
+    def _one_hot(self, X : List[List[int]]) -> np.ndarray:
+        """
+        Perform one-hot encoding
+        """
+        idxs = np.array(X).reshape(-1)
+        return np.eye(self.mps.part_d)[idxs].reshape((-1, self.mps.N, self.mps.part_d))
 
 
     def __call__(self, x : float) -> float:
@@ -79,7 +88,7 @@ class FunctionMps():
 
         the value of the function at x
         """
-        return self.model([real2word(x, l=self.model.mps.N, x0=self.x0, x1=self.x1)])[0]
+        return self.model(self._one_hot([real2word(x, l=self.model.mps.N, x0=self.x0, x1=self.x1)]))[0]
 
 
     def comparison_chart(self, n_points : int = 50):
@@ -129,6 +138,6 @@ class FunctionMps():
 
         data = [(list(x), f(word2real(list(x), x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * len(self.model)))]
 
-        self.model.fit([t[0] for t in data], [t[1] for t in data], learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        self.model.fit(self._one_hot([t[0] for t in data]), [t[1] for t in data], learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
