@@ -171,7 +171,7 @@ class MpsR(Mps):
         return cost(self, X, y)
 
 
-    def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    def fit(self, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
         """
         Fit the MPS to the data
 
@@ -187,7 +187,6 @@ class MpsR(Mps):
         Parameters:
         -----------
         X : np.ndarray
-
         y : np.ndarray
         the data to be fitted
 
@@ -200,7 +199,7 @@ class MpsR(Mps):
         epochs : int
         number of epochs
         """
-        fit_regression(self, X, y, learn_rate, batch_size, epochs)
+        fit_regression(self, X, y, X_test, y_test, learn_rate, batch_size, epochs)
 
         return self
 
@@ -370,5 +369,5 @@ class SymbolicMps():
         """
         Fit the MPS to the data
         """
-        self.mps.fit(self._one_hot(X), np.array(y), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        self.mps.fit(self._one_hot(X), np.array(y), X_test = None, y_test = None, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
         return self

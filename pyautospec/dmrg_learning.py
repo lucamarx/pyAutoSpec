@@ -363,7 +363,7 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     raise Exception("invalid direction")
 
 
-def fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
     """
     Fit the MPS to the data
 
@@ -379,9 +379,12 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1
     Parameters:
     -----------
     X : np.ndarray
-
     y : np.ndarray
     the data to be fitted
+
+    X_test : np.ndarray
+    y_test : np.ndarray
+    the test data
 
     learn_rate : float
     learning rate

@@ -99,7 +99,7 @@ class DatasetMps():
         return self(X)
 
 
-    def fit(self, X : np.ndarray, y : np.ndarray, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50):
+    def fit(self, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50):
         """
         Fit the model to the data
 
