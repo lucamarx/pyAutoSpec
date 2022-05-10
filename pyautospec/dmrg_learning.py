@@ -433,13 +433,13 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
             if X_test is not None and y_test is not None:
                 test_cost = cost(mps, X_test, y_test)
                 mavg = 0 if len(moving_average) == 0 else sum(moving_average) / len(moving_average)
-                if len(moving_average) > 4 and test_cost[1] > mavg:
+                if len(moving_average) > 4 and test_cost[0] > mavg:
                     print("------------------------------------------------------------")
                     break
 
                 print("epoch {:4d}: train avg={:.2f} std={:.2f} | test avg={:.2f} std={:.2f} ({:.2f})".format(epoch, *cost(mps, X, y), *test_cost, mavg))
 
-                moving_average.append(test_cost[1])
+                moving_average.append(test_cost[0])
                 if len(moving_average) > 6:
                     moving_average.pop(0)
 
