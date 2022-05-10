@@ -134,11 +134,20 @@ class DatasetMps():
         if self.classification_model is not None:
             # train the classification models for each class label
             for cls in range(len(self.classification_model)):
-                self.classification_model[cls].fit(data2vector(X, x0=self.x0, x1=self.x1), (y == cls).astype(int), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+                X_cls_train, y_cls_train = data2vector(X, x0=self.x0, x1=self.x1), (y == cls).astype(int)
+
+                X_cls_test, y_cls_test = None, None
+                if X_test is not None and y_test is not None:
+                    X_cls_test, y_cls_test = data2vector(X_test, x0=self.x0, x1=self.x1), (y_test == cls).astype(int)
+
+                self.classification_model[cls].fit(X_cls_train, y_cls_train, X_cls_test, y_cls_test, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         else:
             # train the regression model
-            self.regression_model.fit(data2vector(X, x0=self.x0, x1=self.x1), y, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+            if X_test is not None and y_test is not None:
+                X_test = data2vector(X_test, x0=self.x0, x1=self.x1)
+
+            self.regression_model.fit(data2vector(X, x0=self.x0, x1=self.x1), y, X_test, y_test, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
 

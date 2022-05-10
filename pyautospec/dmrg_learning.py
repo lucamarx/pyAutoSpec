@@ -38,7 +38,7 @@ def cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
     Compute cost function
     """
     c = np.square(mps(X) - y)
-    return np.min(c).item(), (np.sum(c).item() / X.shape[0]), np.max(c).item()
+    return np.average(c).item(), np.std(c).item()
 
 
 def squared_norm(mps) -> float:
@@ -407,6 +407,7 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
     if X.shape[2] != mps.part_d:
         raise Exception("invalid shape for X (wrong particle dimension)")
 
+    moving_average = []
     for epoch in tqdm(range(1, epochs+1)):
         for _ in range(1, int(X.shape[0] / batch_size)):
             batch = np.random.randint(0, high=X.shape[0], size=batch_size)
@@ -429,8 +430,21 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
                     break
 
         if epoch % 10 == 0:
-            print("epoch {:4d}: min={:.2f} avg={:.2f} max={:.2f}".format(epoch, *cost(mps, X, y)))
+            if X_test is not None and y_test is not None:
+                test_cost = cost(mps, X_test, y_test)
+                mavg = 0 if len(moving_average) == 0 else sum(moving_average) / len(moving_average)
+                if len(moving_average) > 4 and test_cost[1] > mavg:
+                    print("------------------------------------------------------------")
+                    break
 
+                print("epoch {:4d}: train avg={:.2f} std={:.2f} | test avg={:.2f} std={:.2f} ({:.2f})".format(epoch, *cost(mps, X, y), *test_cost, mavg))
+
+                moving_average.append(test_cost[1])
+                if len(moving_average) > 6:
+                    moving_average.pop(0)
+
+            else:
+                print("epoch {:4d}: avg={:.2f} std={:.2f}".format(epoch, *cost(mps, X, y)))
 
 def fit_classification(mps, X : np.ndarray, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
     """
