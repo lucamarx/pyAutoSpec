@@ -10,9 +10,9 @@ def data2vector(X : np.ndarray, x0 : np.ndarray, x1 : np.ndarray) -> np.ndarray:
     """
     Convert data points into 2-dim vectors
     """
-    theta = 2 * np.pi * (X - x0) / (x1 - x0)
+    theta = 0.5 * np.pi * (X - x0) / (x1 - x0)
 
-    if np.any(theta < 0) or np.any(theta > 2*np.pi):
+    if np.any(theta < 0) or np.any(theta > 0.5*np.pi):
         raise Exception("out of range")
 
     return np.dstack((np.cos(theta), np.sin(theta)))
