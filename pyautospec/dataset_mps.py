@@ -60,7 +60,7 @@ class DatasetMps():
 
     def __repr__(self) -> str:
         if self.classification_model is not None:
-            return "  DatasetMps(classification)\n{}".format("\n".join(["class: {:3d} --------------".format(i) + model.__repr__() for (i, model) in enumerate(self.classification_model)]))
+            return "  DatasetMps(classification)\n{}".format("\n".join(["  class: {:2d} -------------".format(i) + model.__repr__() for (i, model) in enumerate(self.classification_model)]))
         else:
             return "  DatasetMps(regression)\n{}".format(self.regression_model)
 

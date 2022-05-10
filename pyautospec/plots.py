@@ -2,6 +2,7 @@
 Various wfa plots
 """
 import itertools
+import numpy as np
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
@@ -111,3 +112,62 @@ def function_wfa_comparison_chart(wfa, n_points : int = 50, resolution : int = 1
         plt.plot(xs, v2, label="f'")
 
     plt.legend()
+
+
+def parallel_plot(X : np.ndarray, y : np.ndarray, feature_names : List[str] = None, target_names : List[str] = None, title : str = "Parallel Plot"):
+    """
+    Plot multidimensional dataset as a parallel plot
+    """
+    if feature_names is None:
+        feature_names = ["f {}".format(i+1) for i in range(X.shape[1])]
+
+    if target_names is None:
+        target_names = ["t {}".format(i+1) for i in range(y.max()+1)]
+
+    Xmin, Xmax = X.min(axis=0), X.max(axis=0)
+    Xrange = Xmax - Xmin
+
+    # transform all data to be compatible with the main axis
+    Z = np.zeros_like(X)
+    Z[:, 0]  = X[:, 0]
+    Z[:, 1:] = (X[:, 1:] - Xmin[1:]) / Xrange[1:] * Xrange[0] + Xmin[0]
+
+    _, host = plt.subplots(figsize=(10,4))
+
+    axes = [host] + [host.twinx() for _ in range(X.shape[1] - 1)]
+    for i, ax in enumerate(axes):
+        ax.set_ylim(Xmin[i], Xmax[i])
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        if ax != host:
+            ax.spines["left"].set_visible(False)
+            ax.spines["right"].set_position(("axes", i / (X.shape[1] - 1)))
+            ax.yaxis.set_ticks_position("right")
+
+    host.set_xlim(0, X.shape[1] - 1)
+
+    host.set_xticks(range(X.shape[1]))
+    host.set_xticklabels(feature_names, fontsize=14)
+    host.tick_params(axis='x', which="major", pad=7)
+    host.xaxis.tick_top()
+    host.spines["right"].set_visible(False)
+
+    host.set_title(title, fontsize=18, pad=12)
+
+    colors = plt.cm.Set2.colors
+    legend_handles = [None for _ in target_names]
+    for j in range(X.shape[0]):
+        # create bezier curves
+        verts = list(zip([x for x in np.linspace(0, len(X) - 1, len(X) * 3 - 2, endpoint=True)], np.repeat(Z[j, :], 3)[1:-1]))
+        codes = [Path.MOVETO] + [Path.CURVE4 for _ in range(len(verts) - 1)]
+        patch = PathPatch(Path(verts, codes), facecolor="none", lw=1, alpha=0.6, edgecolor=colors[y[j]])
+
+        host.add_patch(patch)
+        legend_handles[y[j]] = patch
+
+    host.legend(legend_handles, target_names, loc="lower center",
+                bbox_to_anchor=(0.5, -0.18), ncol=len(target_names), fancybox=True,
+                shadow=True)
+
+    plt.tight_layout()
+    plt.show()
