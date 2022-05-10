@@ -23,7 +23,7 @@ class DatasetMps():
     Mps based classification/regression
     """
 
-    def __init__(self, field_n : int, max_bond_dim : int = 20, class_n : int = None):
+    def __init__(self, field_n : int, x0 : np.ndarray = None, x1 : np.ndarray = None, max_bond_dim : int = 20, class_n : int = None):
         """
         Intialize a classification/regression model
 
@@ -33,15 +33,22 @@ class DatasetMps():
         field_n : int
         the number of fields in the dataset
 
+        x0 : np.ndarray
+        x1 : np.ndarray
+        the data ranges
+
         max_bond_dim : int
         the underlying MPS maximum bond dimension
 
         class_n : int
         the number of classes (None for regression)
         """
-        self.x0, self.x1 = None, None
-
         self.field_n = field_n
+
+        if x0 is None or x1 is None:
+            x0, x1 = np.zeros((field_n, )), np.ones((field_n, ))
+
+        self.x0, self.x1 = x0, x1
 
         if class_n is not None:
             self.classification_model = [MpsR(field_n, 2, max_bond_dim) for _ in range(class_n)]
@@ -72,9 +79,6 @@ class DatasetMps():
 
         the estimated class/value
         """
-        if self.x0 is None or self.x1 is None:
-            raise Exception("the model has not been trained yet")
-
         if self.classification_model is not None:
             l = np.dstack([np.abs(1.0 - m(data2vector(X, x0=self.x0, x1=self.x1))) for m in self.classification_model])
             return np.argmin(l, 2).reshape((X.shape[0], ))
@@ -128,8 +132,6 @@ class DatasetMps():
 
         if X.shape[1] != self.field_n:
             raise Exception("invalid number of fields")
-
-        self.x0, self.x1 = 0.9 * np.min(X, axis=0), 1.1 * np.max(X, axis=0)
 
         if self.classification_model is not None:
             # train the classification models for each class label
