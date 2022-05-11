@@ -31,13 +31,15 @@ setup(
 
     install_requires=[
         "scikit-image>=0.19.2",
+        "scikit-learn>=1.0.2",
         "matplotlib>=3.3.4",
         "graphviz>=0.19.0",
         "tqdm>=4.62.0",
         "jaxlib>=0.3.0",
         "jax>=0.3.0",
     ],
-    extras_require={
-        "test": ["unittest"]
-    }
+    # coming soon...
+    # extras_require={
+    #     "test": ["unittest"]
+    # }
 )
