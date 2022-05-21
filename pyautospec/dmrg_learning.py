@@ -255,23 +255,25 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     mps[n]   = A1
     mps[n+1] = A2
 
-    if direction == "right2left" and cache is not None:
-        if n+1 == mps.N-1:
-            cache[n+1] = np.einsum("ip,bp->bi", mps[n+1], X[:, n+1, :])
-        else:
-            cache[n+1] = np.einsum("ipj,bp,bj->bi", mps[n+1], X[:, n+1, :], cache[n+2])
+    if direction == "right2left":
+        if cache is not None:
+            if n+1 == mps.N-1:
+                cache[n+1] = np.einsum("ip,bp->bi", mps[n+1], X[:, n+1, :])
+            else:
+                cache[n+1] = np.einsum("ipj,bp,bj->bi", mps[n+1], X[:, n+1, :], cache[n+2])
 
         return n-1
 
-    if direction == "left2right" and cache is not None:
-        if n == 0:
-            cache[n] = np.einsum("bp,pi->bi", X[:, n, :], mps[n])
-        else:
-            cache[n] = np.einsum("bi,bp,ipj->bj", cache[n-1], X[:, n, :], mps[n])
+    if direction == "left2right":
+        if cache is not None:
+            if n == 0:
+                cache[n] = np.einsum("bp,pi->bi", X[:, n, :], mps[n])
+            else:
+                cache[n] = np.einsum("bi,bp,ipj->bj", cache[n-1], X[:, n, :], mps[n])
 
         return n+1
 
-    raise Exception("invalid direction")
+    raise Exception("invalid direction: {}".format(direction))
 
 
 def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
