@@ -74,6 +74,8 @@ class Mps:
 
 
     def __repr__(self) -> str:
+        bond_d = max([self[n].shape[-1] for n in range(len(self)-1)])
+
         return """
   ╭───┐ ╭───┐       ╭───┐
   │ 1 ├─┤ 2 ├─ ... ─┤{:3d}│
@@ -81,7 +83,7 @@ class Mps:
 
   particle dim: {:3d}
       bond dim: {:3d} (max: {:d})
-        """.format(self.N, self.part_d, *self.bond_dimension())
+        """.format(self.N, self.part_d, bond_d, self.max_bond_d)
 
 
     def __len__(self) -> int:
@@ -112,16 +114,16 @@ class Mps:
             self.mps[n] = m[0:self.max_bond_d, :, 0:self.max_bond_d]
 
 
-    def bond_dimension(self) -> Tuple[int, int]:
+    def bond_dimensions(self) -> List[int]:
         """
-        Return the bond dimension
+        Return the bond dimensions
 
         Returns:
         --------
 
-        A tuple (final bond dimension, max bond dimension)
+        A list of bond dimensions
         """
-        return self[self.N // 2].shape[2], self.max_bond_d
+        return [self[n].shape[-1] for n in range(len(self)-1)]
 
 
     def __call__(self, X : np.ndarray) -> np.ndarray:
