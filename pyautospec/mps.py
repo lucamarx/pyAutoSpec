@@ -168,7 +168,7 @@ class Mps:
         return cost(self, X, y)
 
 
-    def fit(self, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    def fit(self, X : np.ndarray, y : np.ndarray, X_validation : np.ndarray = None, y_validation : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
         """
         Fit the MPS to the data
 
@@ -185,7 +185,11 @@ class Mps:
         -----------
         X : np.ndarray
         y : np.ndarray
-        the data to be fitted
+        the training dataset
+
+        X_validation : np.ndarray
+        y_validation : np.ndarray
+        the optional validation dataset
 
         learn_rate : float
         learning rate
@@ -195,7 +199,10 @@ class Mps:
 
         epochs : int
         number of epochs
+
+        early_stop : bool
+        stop as soon as overfitting is detected (needs a validation dataset)
         """
-        fit_regression(self, X, y, X_test, y_test, learn_rate, batch_size, epochs)
+        fit_regression(self, X, y, X_validation, y_validation, learn_rate, batch_size, epochs, early_stop)
 
         return self

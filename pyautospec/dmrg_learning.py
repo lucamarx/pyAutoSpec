@@ -276,7 +276,7 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     raise Exception("invalid direction: {}".format(direction))
 
 
-def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = None, y_test : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_validation : np.ndarray = None, y_validation : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
     """
     Fit the MPS to the data
 
@@ -293,7 +293,11 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
     -----------
     X : np.ndarray
     y : np.ndarray
-    the data to be fitted
+    the training dataset
+
+    X_validation : np.ndarray
+    y_validation : np.ndarray
+    the optional validation dataset
 
     X_test : np.ndarray
     y_test : np.ndarray
@@ -307,6 +311,9 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
 
     epochs : int
     number of epochs
+
+    early_stop : bool
+    stop as soon as overfitting is detected (needs a validation dataset)
     """
     if len(X.shape) != 3:
         raise Exception("invalid data")
@@ -343,17 +350,17 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_test : np.ndarray = No
                     break
 
         if epoch % 10 == 0:
-            if X_test is not None and y_test is not None:
-                test_cost = cost(mps, X_test, y_test)
+            if X_validation is not None and y_validation is not None:
+                validation_cost = cost(mps, X_validation, y_validation)
                 mavg = 0 if len(moving_average) == 0 else sum(moving_average) / len(moving_average)
-                if len(moving_average) > 4 and test_cost[0] > mavg:
-                    print("            overfitting detected: test score is rising over moving average")
+                if early_stop and len(moving_average) > 4 and validation_cost[0] > mavg:
+                    print("            overfitting detected: validation score is rising over training score")
                     print("            training interrupted")
                     break
 
-                print("epoch {:4d}: train avg={:.2f} std={:.2f} | test avg={:.2f} std={:.2f}".format(epoch, *cost(mps, X, y), *test_cost))
+                print("epoch {:4d}: train avg={:.2f} std={:.2f} | validation avg={:.2f} std={:.2f}".format(epoch, *cost(mps, X, y), *validation_cost))
 
-                moving_average.append(test_cost[0])
+                moving_average.append(validation_cost[0])
                 if len(moving_average) > 6:
                     moving_average.pop(0)
 
