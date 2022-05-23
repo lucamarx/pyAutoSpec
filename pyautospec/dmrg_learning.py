@@ -276,7 +276,7 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     raise Exception("invalid direction: {}".format(direction))
 
 
-def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_validation : np.ndarray = None, y_validation : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+def fit_regression(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
     """
     Fit the MPS to the data
 
@@ -291,17 +291,13 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_validation : np.ndarra
 
     Parameters:
     -----------
-    X : np.ndarray
-    y : np.ndarray
+    X_train : np.ndarray
+    y_train : np.ndarray
     the training dataset
 
-    X_validation : np.ndarray
-    y_validation : np.ndarray
+    X_valid : np.ndarray
+    y_valid : np.ndarray
     the optional validation dataset
-
-    X_test : np.ndarray
-    y_test : np.ndarray
-    the test data
 
     learn_rate : float
     learning rate
@@ -314,24 +310,29 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_validation : np.ndarra
 
     early_stop : bool
     stop as soon as overfitting is detected (needs a validation dataset)
+
+    Returns:
+    --------
+
+    The training and validation costs
     """
-    if len(X.shape) != 3:
+    if len(X_train.shape) != 3:
         raise Exception("invalid data")
 
-    if X.shape[0] != y.shape[0]:
+    if X_train.shape[0] != y_train.shape[0]:
         raise Exception("invalid shape for X,y (wrong sample number)")
 
-    if X.shape[1] != mps.N:
+    if X_train.shape[1] != mps.N:
         raise Exception("invalid shape for X (wrong particle number)")
 
-    if X.shape[2] != mps.part_d:
+    if X_train.shape[2] != mps.part_d:
         raise Exception("invalid shape for X (wrong particle dimension)")
 
-    moving_average = []
+    train_costs, valid_costs, valid_mavg = [], [], []
     for epoch in tqdm(range(1, epochs+1)):
-        for _ in range(1, int(X.shape[0] / batch_size)):
-            batch = np.random.randint(0, high=X.shape[0], size=batch_size)
-            X_batch, y_batch = X[batch], y[batch]
+        for _ in range(1, int(X_train.shape[0] / batch_size)):
+            batch = np.random.randint(0, high=X_train.shape[0], size=batch_size)
+            X_batch, y_batch = X_train[batch], y_train[batch]
 
             cache = ContractionCache(mps, X_batch)
 
@@ -349,20 +350,28 @@ def fit_regression(mps, X : np.ndarray, y : np.ndarray, X_validation : np.ndarra
                 if n == mps.N-1:
                     break
 
-        if epoch % 10 == 0:
-            if X_validation is not None and y_validation is not None:
-                validation_cost = cost(mps, X_validation, y_validation)
-                mavg = 0 if len(moving_average) == 0 else sum(moving_average) / len(moving_average)
-                if early_stop and len(moving_average) > 4 and validation_cost[0] > mavg:
-                    print("            overfitting detected: validation score is rising over training score")
-                    print("            training interrupted")
-                    break
+        train_cost = cost(mps, X_train, y_train)
+        train_costs.append(train_cost[0])
 
-                print("epoch {:4d}: train avg={:.2f} std={:.2f} | validation avg={:.2f} std={:.2f}".format(epoch, *cost(mps, X, y), *validation_cost))
+        if X_valid is not None and y_valid is not None:
+            valid_cost = cost(mps, X_valid, y_valid)
+            valid_costs.append(valid_cost[0])
 
-                moving_average.append(validation_cost[0])
-                if len(moving_average) > 6:
-                    moving_average.pop(0)
+            mavg = 0 if len(valid_mavg) == 0 else sum(valid_mavg) / len(valid_mavg)
+            if early_stop and len(valid_mavg) > 15 and valid_cost[0] > mavg:
+                print("            overfitting detected: validation score is rising over moving average")
+                print("            training interrupted")
+                break
 
-            else:
-                print("epoch {:4d}: avg={:.2f} std={:.2f}".format(epoch, *cost(mps, X, y)))
+            if epoch % 10 == 0:
+                print("epoch {:4d}: train avg={:.2f} std={:.2f} | valid avg={:.2f} std={:.2f}".format(epoch, *train_cost, *valid_cost))
+
+            valid_mavg.append(valid_cost[0])
+            if len(valid_mavg) > 20:
+                valid_mavg.pop(0)
+
+        else:
+            if epoch % 10 == 0:
+                print("epoch {:4d}: avg={:.2f} std={:.2f}".format(epoch, *train_cost))
+
+    return train_costs, valid_costs

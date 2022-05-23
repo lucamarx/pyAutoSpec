@@ -103,19 +103,19 @@ class DatasetMps():
         return self(X)
 
 
-    def fit(self, X : np.ndarray, y : np.ndarray, X_validation : np.ndarray = None, y_validation : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50, early_stop : bool = False):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50, early_stop : bool = False):
         """
         Fit the model to the data
 
         Parameters:
         -----------
 
-        X : np.ndarray
-        y : np.ndarray
+        X_train : np.ndarray
+        y_train : np.ndarray
         the training dataset
 
-        X_validation : np.ndarray
-        y_validation : np.ndarray
+        X_valid : np.ndarray
+        y_valid : np.ndarray
         the optional validation dataset
 
         learn_rate : float
@@ -135,29 +135,29 @@ class DatasetMps():
 
         The object itself
         """
-        if X.shape[0] != y.shape[0]:
+        if X_train.shape[0] != y_train.shape[0]:
             raise Exception("X and y have different sizes")
 
-        if X.shape[1] != self.field_n:
+        if X_train.shape[1] != self.field_n:
             raise Exception("invalid number of fields")
 
         if self.classification_model is not None:
             # train the classification models for each class label
             for cls in range(len(self.classification_model)):
-                X_cls_train, y_cls_train = data2vector(X, x0=self.x0, x1=self.x1), (y == cls).astype(int)
+                X_cls_train, y_cls_train = data2vector(X_train, x0=self.x0, x1=self.x1), (y_train == cls).astype(int)
 
-                X_cls_validation, y_cls_validation = None, None
-                if X_validation is not None and y_validation is not None:
-                    X_cls_validation, y_cls_validation = data2vector(X_validation, x0=self.x0, x1=self.x1), (y_validation == cls).astype(int)
+                X_cls_valid, y_cls_valid = None, None
+                if X_valid is not None and y_valid is not None:
+                    X_cls_valid, y_cls_valid = data2vector(X_valid, x0=self.x0, x1=self.x1), (y_valid == cls).astype(int)
 
-                self.classification_model[cls].fit(X_cls_train, y_cls_train, X_cls_validation, y_cls_validation, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
+                self.classification_model[cls].fit(X_cls_train, y_cls_train, X_cls_valid, y_cls_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
 
         else:
             # train the regression model
-            if X_validation is not None and y_validation is not None:
-                X_validation = data2vector(X_validation, x0=self.x0, x1=self.x1)
+            if X_valid is not None and y_valid is not None:
+                X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
 
-            self.regression_model.fit(data2vector(X, x0=self.x0, x1=self.x1), y, X_validation, y_validation, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
+            self.regression_model.fit(data2vector(X_train, x0=self.x0, x1=self.x1), y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
 
         return self
 

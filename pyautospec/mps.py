@@ -5,6 +5,7 @@ import numpy as np
 
 from typing import List, Tuple
 
+from .plots import training_chart
 from .dmrg_learning import cost, fit_regression
 
 
@@ -71,6 +72,9 @@ class Mps:
                 self[n+1] = np.einsum("i,ij,jqk->iqk", s, v, self[n+1])
             else:
                 self[n+1] = np.einsum("i,ij,jq->iq", s, v, self[n+1])
+
+        # initialize training/validation costs
+        self.train_costs, self.valid_costs = [], []
 
 
     def __repr__(self) -> str:
@@ -168,7 +172,7 @@ class Mps:
         return cost(self, X, y)
 
 
-    def fit(self, X : np.ndarray, y : np.ndarray, X_validation : np.ndarray = None, y_validation : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
         """
         Fit the MPS to the data
 
@@ -183,12 +187,12 @@ class Mps:
 
         Parameters:
         -----------
-        X : np.ndarray
-        y : np.ndarray
+        X_train : np.ndarray
+        y_train : np.ndarray
         the training dataset
 
-        X_validation : np.ndarray
-        y_validation : np.ndarray
+        X_valid : np.ndarray
+        y_valid : np.ndarray
         the optional validation dataset
 
         learn_rate : float
@@ -203,6 +207,16 @@ class Mps:
         early_stop : bool
         stop as soon as overfitting is detected (needs a validation dataset)
         """
-        fit_regression(self, X, y, X_validation, y_validation, learn_rate, batch_size, epochs, early_stop)
+        self.train_costs, self.valid_costs = fit_regression(self, X_train, y_train, X_valid, y_valid, learn_rate, batch_size, epochs, early_stop)
 
         return self
+
+
+    def training_chart(self):
+        """
+        Plots training/validation costs
+        """
+        if len(self.train_costs) == 0:
+            raise Exception("the model has not been trained yet")
+
+        training_chart(self.train_costs, self.valid_costs)

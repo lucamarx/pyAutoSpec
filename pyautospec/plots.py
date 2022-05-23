@@ -11,6 +11,11 @@ from matplotlib.path import Path
 from typing import List
 from jax import jit, vmap
 
+
+def moving_average(x, w):
+    return np.convolve(x, np.ones(w), 'valid') / w
+
+
 @jit
 def path_weight(alpha, A, omega, X, path):
     """
@@ -171,3 +176,19 @@ def parallel_plot(X : np.ndarray, y : np.ndarray, feature_names : List[str] = No
 
     plt.tight_layout()
     plt.show()
+
+
+def training_chart(train_costs : List[int], valid_costs : List[int]):
+    """
+    Chart the training/validation performance
+    """
+    plt.figure()
+
+    plt.title("Training/Validation Losses")
+
+    plt.plot(moving_average(np.array(train_costs), 10), label="training")
+
+    if len(valid_costs) > 0:
+        plt.plot(moving_average(np.array(valid_costs), 10), label="validation")
+
+    plt.legend()
