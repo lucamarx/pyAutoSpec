@@ -5,13 +5,12 @@ This version supports multi-label classification
 """
 import numpy as np
 
-from typing import Tuple
 from tqdm.auto import tqdm
 
 from .dmrg_learning import ContractionCache, _contract_left, _contract_right
 
 
-def cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
+def cost(mps, X : np.ndarray, y : np.ndarray) -> float:
     """
     Compute cost function
     """
@@ -20,89 +19,81 @@ def cost(mps, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
     return (1/2) * np.sum(np.square(f_l - y_l)).item()
 
 
-def _gradient(mps, k : int, X : np.ndarray, y : np.ndarray, cache : ContractionCache = None) -> float:
+def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cache : ContractionCache = None) -> float:
     """
     Let
 
-          1                   2
-    C =  --- Σ  (f(X_n) - y_n)
-          N   n
+         1         l                2
+    C = --- Σ  Σ (f(X_n) - ẟ(l,y_n))
+         2   n  l
 
     evaluate
 
-           2
-    ∇ C = --- Σ  (f(X_n) - y_n) ∇ f(X_n)
-     B     N   n                 B
-
-    where
-                   ╭───┐      ╭───┐            ╭───┐      ╭───┐
-    ∇ f[a,i,j,b] = │ 1 ├─ .. ─┤k-1├─a        b─┤k+2├─ .. ─┤ N │
-     B             └─┬─┘      └─┬─┘   i    j   └─┬─┘      └─┬─┘
-                     │          │     │    │     │          │
-                     ◯          ◯     ◯    ◯     ◯          ◯
-                           L        x[k] x[k+1]       R
+               l                    l
+    ∇ C = Σ  (f(X_n) - ẟ(l,y_n)) ∇ f(X_n)
+     B     n                      B
+                                           l
+    where                                  │
+                     ╭───┐      ╭───┐             ╭───┐      ╭───┐
+    ∇ f[a,i,j,b,l] = │ 1 ├─ .. ─┤k-1├─a         b─┤k+2├─ .. ─┤ N │
+     B               └─┬─┘      └─┬─┘   i     j   └─┬─┘      └─┬─┘
+                       │          │     │     │     │          │
+                       ◯          ◯     ◯     ◯     ◯          ◯
+                             L        x[k]  x[k+1]       R
     """
-    batch_d = X.shape[0]
+    delta = np.ones(mps.labels)[y]
 
     if k == 0:
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
 
-        # avoid mps re-evaluation
-        w = np.einsum("ipj,bp,bj->bi", mps[1], X[:,k+1,:], R)
-        v = np.einsum("pi,bp,bi->b", mps[0], X[:,k,:], w)
+        f = np.einsum("pqil,bp,bq,bi->bl", B, X[:,k,:], X[:,k+1,:], R)
 
         # perform tensor products
-        d = np.einsum("bp,bq,bi,b->pqi", X[:,k,:], X[:,k+1,:], R, (v - y))
+        d = np.einsum("bp,bq,bi,bl->pqil", X[:,k,:], X[:,k+1,:], R, (f - delta))
 
-    elif k == mps.N-2:
+    elif k == len(mps)-2:
         L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
 
-        # avoid mps re-evaluation
-        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
-        v = np.einsum("bj,bp,jp->b", u, X[:,k+1,:], mps[k+1])
+        f = np.einsum("bi,bp,bq,ipql->bl", L, X[:,k,:], X[:,k+1,:], B)
 
         # perform tensor products
-        d = np.einsum("bi,bp,bq,b->ipq", L, X[:,k,:], X[:,k+1,:], (v - y))
+        d = np.einsum("bi,bp,bq,bl->ipql", L, X[:,k,:], X[:,k+1,:], (f - delta))
 
-    elif 0 < k and k < (mps.N-2):
+    elif 0 < k and k < (len(mps)-2):
         L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
-        u = np.einsum("bi,bp,ipj->bj", L, X[:,k,:], mps[k])
-
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
-        w = np.einsum("ipj,bp,bj->bi", mps[k+1], X[:,k+1,:], R)
 
-        # avoid mps re evaluation
-        v = np.einsum("bi,bi->b", u, w)
+        f = np.einsum("bi,bp,ipqjl,bq,bj->bl", L, X[:,k,:], B, X[:,k+1,:], R)
 
         # perform tensor products
-        d = np.einsum("bi,bp,bq,bj,b->ipqj", L, X[:,k,:], X[:,k+1,:], R, (v - y))
+        d = np.einsum("bi,bp,bq,bj,b->ipqj", L, X[:,k,:], X[:,k+1,:], R, (f - delta))
 
     else:
         raise Exception("invalid k")
 
-    return 2 * d / batch_d
+    return d
 
 
 def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
-    Optimize chain at pivot point j (moving right to left)
+    Optimize chain at pivot point j (moving from right to left)
     """
     # merge tensors at j-1 and j (pivot is at j)
-    if j == mps.N-1:
+    if j == len(mps)-1:
         B = np.einsum("ipj,jql->ipql", mps[j-1], mps[j])
-    elif 0 < j and j < mps.N-1:
+    elif 0 < j and j < len(mps)-1:
         B = np.einsum("ipj,jqkl->ipqkl", mps[j-1], mps[j])
     else:
         raise Exception("pivot is at head of chain")
 
     # compute gradient
-    G = _gradient(mps, j, X, y, cache=cache)
+    G = _gradient(mps, j-1, B, X, y, cache=cache)
 
     # make SGD step
     B -= learn_rate * G
 
     # split B tensor moving pivot at j-1
-    if j == mps.N-1:
+    if j == len(mps)-1:
         bond_d_inp = B.shape[0]
 
         m = B.reshape((bond_d_inp * mps.part_d * mps.labels, mps.part_d))
@@ -120,7 +111,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         if cache is not None:
             cache[j] = np.einsum("ip,bp->bi", mps[j], X[:, j, :])
 
-    elif 0 < j and j < mps.N-1:
+    elif 0 < j and j < len(mps)-1:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
         m = B.reshape((bond_d_inp * mps.part_d * mps.labels, mps.part_d * bond_d_out))
@@ -143,18 +134,18 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
 def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
-    Optimize chain at pivot point n (moving left to right)
+    Optimize chain at pivot point j (moving from left to right)
     """
     # merge tensors at j and j+1 (pivot is at j)
     if j == 0:
         B = np.einsum("pjl,jqk->pqkl", mps[j], mps[j+1])
-    elif 0 < j and j < mps.N-1:
+    elif 0 < j and j < len(mps)-1:
         B = np.einsum("ipjl,jqk->ipqkl", mps[j], mps[j+1])
     else:
         raise Exception("pivot is at tail of chain")
 
     # compute gradient
-    G = _gradient(mps, j, X, y, cache=cache)
+    G = _gradient(mps, j, B, X, y, cache=cache)
 
     # make SGD step
     B -= learn_rate * G
@@ -178,7 +169,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         if cache is not None:
             cache[j] = np.einsum("bp,pi->bi", X[:, j, :], mps[j])
 
-    elif 0 < j and j < mps.N-1:
+    elif 0 < j and j < len(mps)-1:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
         m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * bond_d_out * mps.labels))
@@ -200,8 +191,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
 
 def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
-    """
-    Fit the MPS to the data
+    """Fit the MPS to the data
 
     0. for each epoch
     1.  sample a random mini-batch from X
@@ -209,7 +199,7 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
     3.   contract A^k and A^(k+1) into B^k
     4.   evaluate gradients for mini-batch
     5.   update B^k
-    6.   split B^k with SVD ensuring canonicalization
+    6.   split B^k with SVD
     7.   move to next k
 
     Parameters:
@@ -231,8 +221,8 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
     epochs : int
     number of epochs
 
-    early_stop : bool
-    stop as soon as overfitting is detected (needs a validation dataset)
+    early_stop : bool stop as soon as overfitting is detected (needs a
+    validation dataset)
 
     Returns:
     --------
@@ -260,7 +250,7 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
             cache = ContractionCache(mps, X_batch)
 
             # right to left pass
-            n = mps.N-1
+            n = len(mps)-1
             while True:
                 n = _move_pivot_r2l(mps, X_batch, y_batch, n, learn_rate, cache)
                 if n == 0:
@@ -270,7 +260,7 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
             n = 0
             while True:
                 n = _move_pivot_l2r(mps, X_batch, y_batch, n, learn_rate, cache)
-                if n == mps.N-1:
+                if n == len(mps)-1:
                     break
 
         train_cost = cost(mps, X_train, y_train)
