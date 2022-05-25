@@ -14,7 +14,7 @@ def cost(mps, X : np.ndarray, y : np.ndarray) -> float:
     """
     Compute cost function
     """
-    f_l, y_l = mps(X), np.eye(mps.labels)[y]
+    f_l, y_l = mps(X), np.eye(mps.class_d)[y]
 
     return (1/2) * np.sum(np.square(f_l - y_l)).item()
 
@@ -41,7 +41,7 @@ def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cach
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
     """
-    delta = np.ones(mps.labels)[y]
+    delta = np.ones(mps.class_d)[y]
 
     if k == 0:
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
@@ -96,7 +96,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     if j == len(mps)-1:
         bond_d_inp = B.shape[0]
 
-        m = B.reshape((bond_d_inp * mps.part_d * mps.labels, mps.part_d))
+        m = B.reshape((bond_d_inp * mps.part_d * mps.class_d, mps.part_d))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -106,7 +106,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         u = np.einsum("ij,j->ij", u, s_sqrt)
         v = np.einsum("i,ij->ij", s_sqrt, v)
 
-        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.labels)), v.reshape((bond_d, mps.part_d))
+        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d))
 
         if cache is not None:
             cache[j] = np.einsum("ip,bp->bi", mps[j], X[:, j, :])
@@ -114,7 +114,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     elif 0 < j and j < len(mps)-1:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
-        m = B.reshape((bond_d_inp * mps.part_d * mps.labels, mps.part_d * bond_d_out))
+        m = B.reshape((bond_d_inp * mps.part_d * mps.class_d, mps.part_d * bond_d_out))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -124,7 +124,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         u = np.einsum("ij,j->ij", u, s_sqrt)
         v = np.einsum("i,ij->ij", s_sqrt, v)
 
-        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.labels)), v.reshape((bond_d, mps.part_d, bond_d_out))
+        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
@@ -154,7 +154,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     if j == 0:
         bond_d_out = B.shape[2]
 
-        m = B.reshape((mps.part_d, mps.part_d * bond_d_out * mps.labels))
+        m = B.reshape((mps.part_d, mps.part_d * bond_d_out * mps.class_d))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -164,7 +164,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         u = np.einsum("ij,j->ij", u, s_sqrt)
         v = np.einsum("i,ij->ij", s_sqrt, v)
 
-        mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.labels))
+        mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
 
         if cache is not None:
             cache[j] = np.einsum("bp,pi->bi", X[:, j, :], mps[j])
@@ -172,7 +172,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     elif 0 < j and j < len(mps)-1:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
-        m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * bond_d_out * mps.labels))
+        m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * bond_d_out * mps.class_d))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -182,7 +182,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         u = np.einsum("ij,j->ij", u, s_sqrt)
         v = np.einsum("i,ij->ij", s_sqrt, v)
 
-        mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.labels))
+        mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
 
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
