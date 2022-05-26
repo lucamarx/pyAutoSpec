@@ -41,7 +41,7 @@ def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cach
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
     """
-    delta = np.ones(mps.class_d)[y]
+    delta = np.eye(mps.class_d)[y]
 
     if k == 0:
         R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
@@ -66,7 +66,7 @@ def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cach
         f = np.einsum("bi,bp,ipqjl,bq,bj->bl", L, X[:,k,:], B, X[:,k+1,:], R)
 
         # perform tensor products
-        d = np.einsum("bi,bp,bq,bj,b->ipqj", L, X[:,k,:], X[:,k+1,:], R, (f - delta))
+        d = np.einsum("bi,bp,bq,bj,bl->ipqjl", L, X[:,k,:], X[:,k+1,:], R, (f - delta))
 
     else:
         raise Exception("invalid k")
@@ -81,8 +81,10 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     # merge tensors at j-1 and j (pivot is at j)
     if j == len(mps)-1:
         B = np.einsum("ipj,jql->ipql", mps[j-1], mps[j])
-    elif 0 < j and j < len(mps)-1:
+    elif 1 < j and j < len(mps)-1:
         B = np.einsum("ipj,jqkl->ipqkl", mps[j-1], mps[j])
+    elif j == 1:
+        B = np.einsum("pj,jqkl->pqkl", mps[j-1], mps[j])
     else:
         raise Exception("pivot is at head of chain")
 
@@ -111,7 +113,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         if cache is not None:
             cache[j] = np.einsum("ip,bp->bi", mps[j], X[:, j, :])
 
-    elif 0 < j and j < len(mps)-1:
+    elif 1 < j and j < len(mps)-1:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
         m = B.reshape((bond_d_inp * mps.part_d * mps.class_d, mps.part_d * bond_d_out))
@@ -129,6 +131,24 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
 
+    elif j == 1:
+        bond_d_out = B.shape[2]
+
+        m = B.reshape((mps.part_d * mps.class_d, mps.part_d * bond_d_out))
+
+        u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
+
+        bond_d = u.shape[1]
+
+        s_sqrt = np.sqrt(s)
+        u = np.einsum("ij,j->ij", u, s_sqrt)
+        v = np.einsum("i,ij->ij", s_sqrt, v)
+
+        mps[j-1], mps[j] = u.reshape((mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+
+        if cache is not None:
+            cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
+
     return j-1
 
 
@@ -139,8 +159,10 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     # merge tensors at j and j+1 (pivot is at j)
     if j == 0:
         B = np.einsum("pjl,jqk->pqkl", mps[j], mps[j+1])
-    elif 0 < j and j < len(mps)-1:
+    elif 0 < j and j < len(mps)-2:
         B = np.einsum("ipjl,jqk->ipqkl", mps[j], mps[j+1])
+    elif j == len(mps)-2:
+        B = np.einsum("ipjl,jq->ipql", mps[j], mps[j+1])
     else:
         raise Exception("pivot is at tail of chain")
 
@@ -169,7 +191,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         if cache is not None:
             cache[j] = np.einsum("bp,pi->bi", X[:, j, :], mps[j])
 
-    elif 0 < j and j < len(mps)-1:
+    elif 0 < j and j < len(mps)-2:
         bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
 
         m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * bond_d_out * mps.class_d))
@@ -183,6 +205,24 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         v = np.einsum("i,ij->ij", s_sqrt, v)
 
         mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
+
+        if cache is not None:
+            cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
+
+    elif j == len(mps)-2:
+        bond_d_inp = B.shape[0]
+
+        m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * mps.class_d))
+
+        u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
+
+        bond_d = u.shape[1]
+
+        s_sqrt = np.sqrt(s)
+        u = np.einsum("ij,j->ij", u, s_sqrt)
+        v = np.einsum("i,ij->ij", s_sqrt, v)
+
+        mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d))
 
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
