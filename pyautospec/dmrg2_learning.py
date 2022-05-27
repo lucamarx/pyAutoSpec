@@ -19,15 +19,17 @@ def cost(mps, X : np.ndarray, y : np.ndarray) -> float:
     return (1/2) * np.sum(np.square(f_l - y_l)).item()
 
 
-def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cache : ContractionCache = None) -> float:
+def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
-    Let
+    Optimize chain at pivot point j (moving from right to left)
+
+    Gradient of
 
          1         l                2
     C = --- Σ  Σ (f(X_n) - ẟ(l,y_n))
          2   n  l
 
-    evaluate
+    is computed as
 
                l                    l
     ∇ C = Σ  (f(X_n) - ẟ(l,y_n)) ∇ f(X_n)
@@ -43,59 +45,20 @@ def _gradient(mps, k : int, B : np.ndarray, X : np.ndarray, y : np.ndarray, cach
     """
     delta = np.eye(mps.class_d)[y]
 
-    if k == 0:
-        R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
-
-        f = np.einsum("pqil,bp,bq,bi->bl", B, X[:,k,:], X[:,k+1,:], R)
-
-        # perform tensor products
-        d = np.einsum("bp,bq,bi,bl->pqil", X[:,k,:], X[:,k+1,:], R, (f - delta))
-
-    elif k == len(mps)-2:
-        L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
-
-        f = np.einsum("bi,bp,bq,ipql->bl", L, X[:,k,:], X[:,k+1,:], B)
-
-        # perform tensor products
-        d = np.einsum("bi,bp,bq,bl->ipql", L, X[:,k,:], X[:,k+1,:], (f - delta))
-
-    elif 0 < k and k < (len(mps)-2):
-        L = cache[k-1] if cache is not None else _contract_left(mps, k-1, X)
-        R = cache[k+2] if cache is not None else _contract_right(mps, k+2, X)
-
-        f = np.einsum("bi,bp,ipqjl,bq,bj->bl", L, X[:,k,:], B, X[:,k+1,:], R)
-
-        # perform tensor products
-        d = np.einsum("bi,bp,bq,bj,bl->ipqjl", L, X[:,k,:], X[:,k+1,:], R, (f - delta))
-
-    else:
-        raise Exception("invalid k")
-
-    return d
-
-
-def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
-    """
-    Optimize chain at pivot point j (moving from right to left)
-    """
-    # merge tensors at j-1 and j (pivot is at j)
     if j == len(mps)-1:
-        B = np.einsum("ipj,jql->ipql", mps[j-1], mps[j])
-    elif 1 < j and j < len(mps)-1:
-        B = np.einsum("ipj,jqkl->ipqkl", mps[j-1], mps[j])
-    elif j == 1:
-        B = np.einsum("pj,jqkl->pqkl", mps[j-1], mps[j])
-    else:
-        raise Exception("pivot is at head of chain")
+        # TAIL
+        # merge tensors at j-1 and j (pivot is at j)
+        B = np.einsum("ipk,kql->iplq", mps[j-1], mps[j])
 
-    # compute gradient
-    G = _gradient(mps, j-1, B, X, y, cache=cache)
+        # compute gradient
+        L = cache[j-2] if cache is not None else _contract_left(mps, j-2, X)
+        f = np.einsum("bi,bp,bq,iplq->bl", L, X[:,j-1,:], X[:,j,:], B)
+        G = np.einsum("bi,bp,bq,bl->iplq", L, X[:,j-1,:], X[:,j,:], (f - delta))
 
-    # make SGD step
-    B -= learn_rate * G
+        # make SGD step
+        B -= learn_rate * G
 
-    # split B tensor moving pivot at j-1
-    if j == len(mps)-1:
+        # split B tensor moving pivot at j-1
         bond_d_inp = B.shape[0]
 
         m = B.reshape((bond_d_inp * mps.part_d * mps.class_d, mps.part_d))
@@ -106,29 +69,59 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         u = np.einsum("ij,j->ij", u, s)
 
-        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d))
+        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d))
 
         if cache is not None:
             cache[j] = np.einsum("ip,bp->bi", mps[j], X[:, j, :])
 
     elif 1 < j and j < len(mps)-1:
-        bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
+        # MIDDLE
+        # merge tensors at j-1 and j (pivot is at j)
+        B = np.einsum("ipk,kqlj->iplqj", mps[j-1], mps[j])
+
+        # compute gradient
+        L = cache[j-2] if cache is not None else _contract_left(mps, j-2, X)
+        R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
+
+        f = np.einsum("bi,bp,iplqj,bq,bj->bl", L, X[:,j-1,:], B, X[:,j,:], R)
+        G = np.einsum("bi,bp,bq,bj,bl->iplqj", L, X[:,j-1,:], X[:,j,:], R, (f - delta))
+
+        # make SGD step
+        B -= learn_rate * G
+
+        # split B tensor moving pivot at j-1
+        bond_d_inp, bond_d_out = B.shape[0], B.shape[4]
 
         m = B.reshape((bond_d_inp * mps.part_d * mps.class_d, mps.part_d * bond_d_out))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
+        # split B tensor moving pivot at j-1
         bond_d = u.shape[1]
 
         u = np.einsum("ij,j->ij", u, s)
 
-        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+        mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
 
     elif j == 1:
-        bond_d_out = B.shape[2]
+        # HEAD
+        # merge tensors at j-1 and j (pivot is at j)
+        B = np.einsum("pk,kqlj->plqj", mps[j-1], mps[j])
+
+        # compute gradient
+        R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
+
+        f = np.einsum("plqj,bp,bq,bj->bl", B, X[:,j-1,:], X[:,j,:], R)
+        G = np.einsum("bp,bq,bj,bl->plqj", X[:,j-1,:], X[:,j,:], R, (f - delta))
+
+        # make SGD step
+        B -= learn_rate * G
+
+        # split B tensor moving pivot at j-1
+        bond_d_out = B.shape[3]
 
         m = B.reshape((mps.part_d * mps.class_d, mps.part_d * bond_d_out))
 
@@ -138,10 +131,13 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         u = np.einsum("ij,j->ij", u, s)
 
-        mps[j-1], mps[j] = u.reshape((mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+        mps[j-1], mps[j] = u.reshape((mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
+
+    else:
+        raise Exception("pivot is at head of chain")
 
     return j-1
 
@@ -149,28 +145,47 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
     Optimize chain at pivot point j (moving from left to right)
+
+    Gradient of
+
+         1         l                2
+    C = --- Σ  Σ (f(X_n) - ẟ(l,y_n))
+         2   n  l
+
+    is computed as
+
+               l                    l
+    ∇ C = Σ  (f(X_n) - ẟ(l,y_n)) ∇ f(X_n)
+     B     n                      B
+                                           l
+    where                                  │
+                     ╭───┐      ╭───┐             ╭───┐      ╭───┐
+    ∇ f[a,i,j,b,l] = │ 1 ├─ .. ─┤k-1├─a         b─┤k+2├─ .. ─┤ N │
+     B               └─┬─┘      └─┬─┘   i     j   └─┬─┘      └─┬─┘
+                       │          │     │     │     │          │
+                       ◯          ◯     ◯     ◯     ◯          ◯
+                             L        x[k]  x[k+1]       R
     """
-    # merge tensors at j and j+1 (pivot is at j)
+    delta = np.eye(mps.class_d)[y]
+
     if j == 0:
-        B = np.einsum("pjl,jqk->pqkl", mps[j], mps[j+1])
-    elif 0 < j and j < len(mps)-2:
-        B = np.einsum("ipjl,jqk->ipqkl", mps[j], mps[j+1])
-    elif j == len(mps)-2:
-        B = np.einsum("ipjl,jq->ipql", mps[j], mps[j+1])
-    else:
-        raise Exception("pivot is at tail of chain")
+        # HEAD
+        # merge tensors at j and j+1 (pivot is at j)
+        B = np.einsum("plk,kqj->pqlj", mps[j], mps[j+1])
 
-    # compute gradient
-    G = _gradient(mps, j, B, X, y, cache=cache)
+        # compute gradient
+        R = cache[j+2] if cache is not None else _contract_right(mps, j+2, X)
 
-    # make SGD step
-    B -= learn_rate * G
+        f = np.einsum("pqlj,bp,bq,bj->bl", B, X[:,j,:], X[:,j+1,:], R)
+        G = np.einsum("bp,bq,bj,bl->pqlj", X[:,j,:], X[:,j+1,:], R, (f - delta))
 
-    # split B tensor moving pivot at j+1
-    if j == 0:
-        bond_d_out = B.shape[2]
+        # make SGD step
+        B -= learn_rate * G
 
-        m = B.reshape((mps.part_d, mps.part_d * bond_d_out * mps.class_d))
+        # split B tensor moving pivot at j+1
+        bond_d_out = B.shape[3]
+
+        m = B.reshape((mps.part_d, mps.part_d * mps.class_d * bond_d_out))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -178,15 +193,30 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         v = np.einsum("i,ij->ij", s, v)
 
-        mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
+        mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d, bond_d_out))
 
         if cache is not None:
             cache[j] = np.einsum("bp,pi->bi", X[:, j, :], mps[j])
 
     elif 0 < j and j < len(mps)-2:
-        bond_d_inp, bond_d_out = B.shape[0], B.shape[3]
+        # MIDDLE
+        # merge tensors at j and j+1 (pivot is at j)
+        B = np.einsum("iplk,kqj->ipqlj", mps[j], mps[j+1])
 
-        m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * bond_d_out * mps.class_d))
+        # compute gradient
+        L = cache[j-1] if cache is not None else _contract_left(mps, j-1, X)
+        R = cache[j+2] if cache is not None else _contract_right(mps, j+2, X)
+
+        f = np.einsum("bi,bp,ipqlj,bq,bj->bl", L, X[:,j,:], B, X[:,j+1,:], R)
+        G = np.einsum("bi,bp,bq,bj,bl->ipqlj", L, X[:,j,:], X[:,j+1,:], R, (f - delta))
+
+        # make SGD step
+        B -= learn_rate * G
+
+        # split B tensor moving pivot at j+1
+        bond_d_inp, bond_d_out = B.shape[0], B.shape[4]
+
+        m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * mps.class_d * bond_d_out))
 
         u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
 
@@ -194,12 +224,26 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         v = np.einsum("i,ij->ij", s, v)
 
-        mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
+        mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d, bond_d_out))
 
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
 
     elif j == len(mps)-2:
+        # TAIL
+        # merge tensors at j and j+1 (pivot is at j)
+        B = np.einsum("iplk,kq->ipql", mps[j], mps[j+1])
+
+        # compute gradient
+        L = cache[j-1] if cache is not None else _contract_left(mps, j-1, X)
+
+        f = np.einsum("bi,bp,bq,ipql->bl", L, X[:,j,:], X[:,j+1,:], B)
+        G = np.einsum("bi,bp,bq,bl->ipql", L, X[:,j,:], X[:,j+1,:], (f - delta))
+
+        # make SGD step
+        B -= learn_rate * G
+
+        # split B tensor moving pivot at j+1
         bond_d_inp = B.shape[0]
 
         m = B.reshape((bond_d_inp * mps.part_d, mps.part_d * mps.class_d))
@@ -214,6 +258,9 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
+
+    else:
+        raise Exception("pivot is at tail of chain")
 
     return j+1
 
