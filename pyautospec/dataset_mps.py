@@ -81,9 +81,9 @@ class DatasetMps():
         the estimated class/value
         """
         if self.classification_model is not None:
-            return self.classification_model(data2vector(X, x0=self.x0, x1=self.x1))
+            return self.classification_model.predict(data2vector(X, x0=self.x0, x1=self.x1))
         else:
-            return self.regression_model(data2vector(X, x0=self.x0, x1=self.x1))
+            return self.regression_model.predict(data2vector(X, x0=self.x0, x1=self.x1))
 
 
     def predict(self, X : np.ndarray) -> np.ndarray:
