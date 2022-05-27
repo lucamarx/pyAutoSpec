@@ -104,9 +104,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        u = np.einsum("ij,j->ij", u, s)
 
         mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d))
 
@@ -122,9 +120,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        u = np.einsum("ij,j->ij", u, s)
 
         mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
@@ -140,9 +136,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        u = np.einsum("ij,j->ij", u, s)
 
         mps[j-1], mps[j] = u.reshape((mps.part_d, bond_d, mps.class_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
@@ -182,9 +176,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        v = np.einsum("i,ij->ij", s, v)
 
         mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
 
@@ -200,9 +192,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        v = np.einsum("i,ij->ij", s, v)
 
         mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out, mps.class_d))
 
@@ -218,9 +208,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
 
         bond_d = u.shape[1]
 
-        s_sqrt = np.sqrt(s)
-        u = np.einsum("ij,j->ij", u, s_sqrt)
-        v = np.einsum("i,ij->ij", s_sqrt, v)
+        v = np.einsum("i,ij->ij", s, v)
 
         mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d))
 
