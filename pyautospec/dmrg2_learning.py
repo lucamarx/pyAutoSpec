@@ -6,6 +6,7 @@ This version supports multi-label classification
 import numpy as np
 
 from tqdm.auto import tqdm
+from typing import List, Tuple
 
 from .dmrg_learning import ContractionCache, _contract_left, _contract_right
 
@@ -265,7 +266,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     return j+1
 
 
-def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False) -> Tuple[List[float], List[float]]:
     """Fit the MPS to the data
 
     0. for each epoch
@@ -346,7 +347,7 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
             valid_costs.append(valid_cost)
 
             mavg = 0 if len(valid_mavg) == 0 else sum(valid_mavg) / len(valid_mavg)
-            if early_stop and len(valid_mavg) > 15 and valid_cost[0] > mavg:
+            if early_stop and len(valid_mavg) > 15 and valid_cost > mavg:
                 print("            overfitting detected: validation score is rising over moving average")
                 print("            training interrupted")
                 break
@@ -354,7 +355,7 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
             if epoch % 10 == 0:
                 print("epoch {:4d}: train {:.2f} | valid {:.2f}".format(epoch, train_cost, valid_cost))
 
-            valid_mavg.append(valid_cost[0])
+            valid_mavg.append(valid_cost)
             if len(valid_mavg) > 20:
                 valid_mavg.pop(0)
 
