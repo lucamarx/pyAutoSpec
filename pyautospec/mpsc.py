@@ -58,6 +58,7 @@ class MpsClass:
 
         # setup tensor container (position pivot at the tail)
         self.mps = [np.random.rand(*s) for s in [(part_d,bond_d)] + [(bond_d,part_d,bond_d)]*(N-2) + [(bond_d,part_d,class_d)]]
+        self.pivot = N-1
 
         # initialize training/validation costs
         self.train_costs, self.valid_costs = [], []
@@ -99,7 +100,8 @@ class MpsClass:
             if len(m.shape) == 2:
                 self.mps[n] = m[:, 0:self.max_bond_d]
             elif len(m.shape) == 3:
-                self.mps[n] = m[:, 0:self.max_bond_d, :]
+                self.mps[n] = m[:, :, 0:self.max_bond_d]
+                self.pivot = n
             else:
                 raise Exception("invalid tensor")
 
@@ -108,6 +110,7 @@ class MpsClass:
                 self.mps[n] = m[0:self.max_bond_d, :]
             elif len(m.shape) == 3:
                 self.mps[n] = m[0:self.max_bond_d, :, :]
+                self.pivot = n
             else:
                 raise Exception("invalid tensor")
 
@@ -115,7 +118,8 @@ class MpsClass:
             if len(m.shape) == 3:
                 self.mps[n] = m[0:self.max_bond_d, :, 0:self.max_bond_d]
             elif len(m.shape) == 4:
-                self.mps[n] = m[0:self.max_bond_d, :, 0:self.max_bond_d, :]
+                self.mps[n] = m[0:self.max_bond_d, :, :, 0:self.max_bond_d]
+                self.pivot = n
             else:
                 raise Exception("invalid tensor")
 
