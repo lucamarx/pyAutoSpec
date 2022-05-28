@@ -162,6 +162,29 @@ class Mps:
         return T
 
 
+    def predict(self, X : np.ndarray) -> np.ndarray:
+        """
+        Evaluate MPS on batch X[b,n,p]
+
+        ╭───┐ ╭───┐       ╭───┐
+        │ 1 ├─┤ 2 ├─ ... ─┤ N │
+        └─┬─┘ └─┬─┘       └─┬─┘
+          ◯     ◯           ◯
+
+        Parameters:
+        -----------
+
+        X : np.ndarray
+        a batch of N part_d dimensional vectors
+
+        Returns:
+        --------
+
+        the value of the tensor for the batch X
+        """
+        return self(X)
+
+
     def cost(self, X : np.ndarray, y : np.ndarray) -> Tuple[float, float, float]:
         """
         Compute cost function
