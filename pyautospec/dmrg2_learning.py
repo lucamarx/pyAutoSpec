@@ -16,8 +16,8 @@ def cost(mps, X : np.ndarray, y : np.ndarray) -> float:
     Compute cost function
     """
     f_l, y_l = mps(X), np.eye(mps.class_d)[y]
-
-    return (1/2) * np.sum(np.square(f_l - y_l)).item()
+    batch_size = X.shape[0]
+    return np.sum(np.square(f_l - y_l)).item() / (2*batch_size)
 
 
 def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
@@ -44,6 +44,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
     """
+    batch_size = X.shape[0]
     delta = np.eye(mps.class_d)[y]
 
     if j == len(mps)-1:
@@ -54,7 +55,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         # compute gradient
         L = cache[j-2] if cache is not None else _contract_left(mps, j-2, X)
         f = np.einsum("bi,bp,bq,iplq->bl", L, X[:,j-1,:], X[:,j,:], B)
-        G = np.einsum("bi,bp,bq,bl->iplq", L, X[:,j-1,:], X[:,j,:], (f - delta))
+        G = np.einsum("bi,bp,bq,bl->iplq", L, X[:,j-1,:], X[:,j,:], (f - delta)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -85,7 +86,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
 
         f = np.einsum("bi,bp,iplqj,bq,bj->bl", L, X[:,j-1,:], B, X[:,j,:], R)
-        G = np.einsum("bi,bp,bq,bj,bl->iplqj", L, X[:,j-1,:], X[:,j,:], R, (f - delta))
+        G = np.einsum("bi,bp,bq,bj,bl->iplqj", L, X[:,j-1,:], X[:,j,:], R, (f - delta)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -116,7 +117,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
 
         f = np.einsum("plqj,bp,bq,bj->bl", B, X[:,j-1,:], X[:,j,:], R)
-        G = np.einsum("bp,bq,bj,bl->plqj", X[:,j-1,:], X[:,j,:], R, (f - delta))
+        G = np.einsum("bp,bq,bj,bl->plqj", X[:,j-1,:], X[:,j,:], R, (f - delta)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
