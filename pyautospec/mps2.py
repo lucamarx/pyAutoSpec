@@ -67,6 +67,30 @@ class Mps2:
         self.mps = [np.random.rand(*s) for s in [(part_d,bond_d)] + [(bond_d,part_d,bond_d)]*(N-2) + [(bond_d,part_d,class_d)]]
         self.pivot = N-1
 
+        # make mps left canonical
+        for n in range(self.N-1):
+            if n > 0:
+                m = self[n].reshape((self.part_d*bond_d, bond_d))
+            else:
+                m = self[n]
+
+            u, s, v = np.linalg.svd(m, full_matrices=False, compute_uv=True)
+
+            if n > 0:
+                self[n] = u.reshape((bond_d, self.part_d, bond_d))
+            else:
+                self[n] = u
+
+            if n < N-2:
+                self[n+1] = np.einsum("i,ij,jqk->iqk", s, v, self[n+1])
+            else:
+                self[n+1] = np.einsum("i,ij,jql->iql", s, v, self[n+1])
+
+        # normalize
+        t = self[N-1]
+        norm = np.sqrt(np.einsum("ipl,ipl->", t, t))
+        self[N-1] = t / norm
+
         # initialize training/validation costs
         self.train_costs, self.valid_costs = [], []
 
