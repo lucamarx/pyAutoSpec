@@ -11,16 +11,15 @@ from typing import List, Tuple
 from .dmrg_learning import ContractionCache, _contract_left, _contract_right
 
 
-def cost(mps, X : np.ndarray, y : np.ndarray) -> float:
+def cost(mps, model_type : str, X : np.ndarray, y : np.ndarray) -> float:
     """
     Compute cost function
     """
-    f_l, y_l = mps(X), np.eye(mps.class_d)[y]
-    batch_size = X.shape[0]
-    return np.sum(np.square(f_l - y_l)).item() / (2*batch_size)
+    c = np.eye(mps.class_d)[y] if model_type == "classification" else y
+    return np.sum(np.square(mps(X) - c)).item() / (2 * X.shape[0])
 
 
-def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
+def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
     Optimize chain at pivot point j (moving from right to left)
 
@@ -45,7 +44,6 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
                              L        x[k]  x[k+1]       R
     """
     batch_size = X.shape[0]
-    delta = np.eye(mps.class_d)[y]
 
     if j == len(mps)-1:
         # TAIL
@@ -55,7 +53,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         # compute gradient
         L = cache[j-2] if cache is not None else _contract_left(mps, j-2, X)
         f = np.einsum("bi,bp,bq,iplq->bl", L, X[:,j-1,:], X[:,j,:], B)
-        G = np.einsum("bi,bp,bq,bl->iplq", L, X[:,j-1,:], X[:,j,:], (f - delta)) / batch_size
+        G = np.einsum("bi,bp,bq,bl->iplq", L, X[:,j-1,:], X[:,j,:], (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -86,7 +84,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
 
         f = np.einsum("bi,bp,iplqj,bq,bj->bl", L, X[:,j-1,:], B, X[:,j,:], R)
-        G = np.einsum("bi,bp,bq,bj,bl->iplqj", L, X[:,j-1,:], X[:,j,:], R, (f - delta)) / batch_size
+        G = np.einsum("bi,bp,bq,bj,bl->iplqj", L, X[:,j-1,:], X[:,j,:], R, (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -117,7 +115,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+1] if cache is not None else _contract_right(mps, j+1, X)
 
         f = np.einsum("plqj,bp,bq,bj->bl", B, X[:,j-1,:], X[:,j,:], R)
-        G = np.einsum("bp,bq,bj,bl->plqj", X[:,j-1,:], X[:,j,:], R, (f - delta)) / batch_size
+        G = np.einsum("bp,bq,bj,bl->plqj", X[:,j-1,:], X[:,j,:], R, (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -144,7 +142,7 @@ def _move_pivot_r2l(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     return j-1
 
 
-def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
+def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : float, cache : ContractionCache = None) -> int:
     """
     Optimize chain at pivot point j (moving from left to right)
 
@@ -168,7 +166,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
     """
-    delta = np.eye(mps.class_d)[y]
+    batch_size = X.shape[0]
 
     if j == 0:
         # HEAD
@@ -179,7 +177,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+2] if cache is not None else _contract_right(mps, j+2, X)
 
         f = np.einsum("pqlj,bp,bq,bj->bl", B, X[:,j,:], X[:,j+1,:], R)
-        G = np.einsum("bp,bq,bj,bl->pqlj", X[:,j,:], X[:,j+1,:], R, (f - delta))
+        G = np.einsum("bp,bq,bj,bl->pqlj", X[:,j,:], X[:,j+1,:], R, (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -210,7 +208,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         R = cache[j+2] if cache is not None else _contract_right(mps, j+2, X)
 
         f = np.einsum("bi,bp,ipqlj,bq,bj->bl", L, X[:,j,:], B, X[:,j+1,:], R)
-        G = np.einsum("bi,bp,bq,bj,bl->ipqlj", L, X[:,j,:], X[:,j+1,:], R, (f - delta))
+        G = np.einsum("bi,bp,bq,bj,bl->ipqlj", L, X[:,j,:], X[:,j+1,:], R, (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -240,7 +238,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
         L = cache[j-1] if cache is not None else _contract_left(mps, j-1, X)
 
         f = np.einsum("bi,bp,bq,ipql->bl", L, X[:,j,:], X[:,j+1,:], B)
-        G = np.einsum("bi,bp,bq,bl->ipql", L, X[:,j,:], X[:,j+1,:], (f - delta))
+        G = np.einsum("bi,bp,bq,bl->ipql", L, X[:,j,:], X[:,j+1,:], (f - c)) / batch_size
 
         # make SGD step
         B -= learn_rate * G
@@ -267,7 +265,7 @@ def _move_pivot_l2r(mps, X : np.ndarray, y : np.ndarray, j : int, learn_rate : f
     return j+1
 
 
-def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False) -> Tuple[List[float], List[float]]:
+def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10) -> Tuple[List[float], List[float]]:
     """Fit the MPS to the data
 
     0. for each epoch
@@ -281,6 +279,12 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
 
     Parameters:
     -----------
+    mps
+    the Mps to train
+
+    model_type : str
+    type of model: classification/regression
+
     X_train : np.ndarray
     y_train : np.ndarray
     the training dataset
@@ -298,14 +302,14 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
     epochs : int
     number of epochs
 
-    early_stop : bool stop as soon as overfitting is detected (needs a
-    validation dataset)
-
     Returns:
     --------
 
     The training and validation costs
     """
+    if model_type not in ["regression", "classification"]:
+        raise Exception("model_type must be either 'regression' or 'classification'")
+
     if len(X_train.shape) != 3:
         raise Exception("invalid data")
 
@@ -318,11 +322,23 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
     if X_train.shape[2] != mps.part_d:
         raise Exception("invalid shape for X (wrong particle dimension)")
 
-    train_costs, valid_costs, valid_mavg = [], [], []
+    if model_type == "regression" and len(y_train.shape) == 1:
+        y_train = y_train.reshape((-1,1))
+
+    if model_type == "regression" and y_valid is not None and len(y_valid.shape) == 1:
+        y_valid = y_valid.reshape((-1,1))
+
+    train_costs, valid_costs = [], []
     for epoch in tqdm(range(1, epochs+1)):
         for _ in range(1, int(X_train.shape[0] / batch_size)):
             batch = np.random.randint(0, high=X_train.shape[0], size=batch_size)
-            X_batch, y_batch = X_train[batch], y_train[batch]
+
+            X_batch = X_train[batch]
+
+            if model_type == "classification":
+                y_batch = np.eye(mps.class_d)[y_train[batch]]
+            else:
+                y_batch = y_train[batch]
 
             cache = ContractionCache(mps, X_batch)
 
@@ -340,25 +356,15 @@ def fit_classification(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid 
                 if n == len(mps)-1:
                     break
 
-        train_cost = cost(mps, X_train, y_train)
+        train_cost = cost(mps, model_type, X_train, y_train)
         train_costs.append(train_cost)
 
         if X_valid is not None and y_valid is not None:
-            valid_cost = cost(mps, X_valid, y_valid)
+            valid_cost = cost(mps, model_type, X_valid, y_valid)
             valid_costs.append(valid_cost)
-
-            mavg = 0 if len(valid_mavg) == 0 else sum(valid_mavg) / len(valid_mavg)
-            if early_stop and len(valid_mavg) > 15 and valid_cost > mavg:
-                print("            overfitting detected: validation score is rising over moving average")
-                print("            training interrupted")
-                break
 
             if epoch % 10 == 0:
                 print("epoch {:4d}: train {:.2f} | valid {:.2f}".format(epoch, train_cost, valid_cost))
-
-            valid_mavg.append(valid_cost)
-            if len(valid_mavg) > 20:
-                valid_mavg.pop(0)
 
         else:
             if epoch % 10 == 0:

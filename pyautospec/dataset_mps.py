@@ -3,8 +3,7 @@ Mps based classification/regression
 """
 import numpy as np
 
-from .mps import Mps
-from .mpsc import MpsClass
+from .mps2 import Mps2
 
 
 def data2vector(X : np.ndarray, x0 : np.ndarray, x1 : np.ndarray) -> np.ndarray:
@@ -24,7 +23,7 @@ class DatasetMps():
     Mps based classification/regression
     """
 
-    def __init__(self, field_n : int, x0 : np.ndarray = None, x1 : np.ndarray = None, max_bond_dim : int = 20, class_n : int = None):
+    def __init__(self, field_n : int, x0 : np.ndarray = None, x1 : np.ndarray = None, max_bond_d : int = 20, class_n : int = None):
         """
         Intialize a classification/regression model
 
@@ -52,18 +51,13 @@ class DatasetMps():
         self.x0, self.x1 = x0, x1
 
         if class_n is not None:
-            self.classification_model = MpsClass(field_n, 2, max_bond_dim, class_d=class_n)
-            self.regression_model = None
+            self.model = Mps2(field_n, part_d=2, max_bond_d=max_bond_d, class_d=class_n, model_type="classification")
         else:
-            self.regression_model = Mps(field_n, 2, max_bond_dim)
-            self.classification_model = None
+            self.model = Mps2(field_n, part_d=2, max_bond_d=max_bond_d, class_d=1, model_type="regression")
 
 
     def __repr__(self) -> str:
-        if self.classification_model is not None:
-            return "  DatasetMps(classification)\n{}".format(self.classification_model.__repr__())
-        else:
-            return "  DatasetMps(regression)\n{}".format(self.regression_model)
+        return "  DatasetMps\n{}".format(self.model.__repr__())
 
 
     def __call__(self, X : np.ndarray) -> int:
@@ -80,10 +74,7 @@ class DatasetMps():
 
         the estimated class/value
         """
-        if self.classification_model is not None:
-            return self.classification_model.predict(data2vector(X, x0=self.x0, x1=self.x1))
-        else:
-            return self.regression_model.predict(data2vector(X, x0=self.x0, x1=self.x1))
+        return self.model.predict(data2vector(X, x0=self.x0, x1=self.x1))
 
 
     def predict(self, X : np.ndarray) -> np.ndarray:
@@ -103,7 +94,7 @@ class DatasetMps():
         return self(X)
 
 
-    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50, early_stop : bool = False):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50):
         """
         Fit the model to the data
 
@@ -141,22 +132,12 @@ class DatasetMps():
         if X_train.shape[1] != self.field_n:
             raise Exception("invalid number of fields")
 
-        if self.classification_model is not None:
-            # train the classification model
-            X_train = data2vector(X_train, x0=self.x0, x1=self.x1)
+        X_train = data2vector(X_train, x0=self.x0, x1=self.x1)
 
-            if X_valid is not None and y_valid is not None:
-                X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
+        if X_valid is not None and y_valid is not None:
+            X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
 
-            self.classification_model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
-
-        else:
-            # train the regression model
-            X_train = data2vector(X_train, x0=self.x0, x1=self.x1)
-            if X_valid is not None and y_valid is not None:
-                X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
-
-            self.regression_model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, early_stop=early_stop)
+        self.model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
 
@@ -174,9 +155,9 @@ class DatasetMps():
         Returns:
         --------
 
-        the accuracy
+        the accuracy/cost
         """
-        if self.classification_model is not None:
+        if self.model.model_type == "classification":
             t = self(X) - y
             return np.average((t == 0).astype(int))
         else:

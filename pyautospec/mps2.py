@@ -6,12 +6,12 @@ import numpy as np
 from typing import List
 
 from .plots import training_chart
-from .dmrg2_learning import cost, fit_classification
+from .dmrg2_learning import cost, fit
 
 
-class MpsClass:
+class Mps2:
     """
-    Matrix Product State for classification
+    Matrix Product State for regression/classification (with pivot)
 
                               │
     ╭───┐ ╭───┐ ╭───┐       ╭─┴─┐
@@ -20,7 +20,7 @@ class MpsClass:
       │     │     │           │
     """
 
-    def __init__(self, N : int, part_d : int = 2, max_bond_d : int = 20, class_d : int = 2):
+    def __init__(self, N : int, part_d : int = 2, max_bond_d : int = 20, class_d : int = 2, model_type : str = "classification"):
         """
         Initialize a random matrix product state, positioning the pivot at the tail
 
@@ -38,6 +38,9 @@ class MpsClass:
 
         class_d : int
         number of classes
+
+        model_type : str
+        the model type: regression or classification
         """
         if N < 3:
             raise Exception("chain too short")
@@ -45,13 +48,17 @@ class MpsClass:
         if part_d < 2:
             raise Exception("particle dimension must be at least 2")
 
-        if class_d < 2:
-            raise Exception("class dimension must be at least 2")
+        if model_type == "classification" and class_d < 2:
+            raise Exception("class dimension must be at least 2 for classification")
+
+        if model_type not in ["regression", "classification"]:
+            raise Exception("model_type must be either 'regression' or 'classification'")
 
         self.N = N
         self.part_d = part_d
         self.class_d = class_d
         self.max_bond_d = max_bond_d
+        self.model_type = model_type
 
         # start with small bond dimension
         bond_d = 2
@@ -75,7 +82,8 @@ class MpsClass:
   particle dim: {:3d}
      class dim: {:3d}
       bond dim: {:3d} (max: {:d})
-        """.format(self.N, self.part_d, self.class_d, bond_d, self.max_bond_d)
+          type: {}
+        """.format(self.N, self.part_d, self.class_d, bond_d, self.max_bond_d, self.model_type)
 
 
     def __len__(self) -> int:
@@ -184,19 +192,22 @@ class MpsClass:
         Returns:
         --------
 
-        the predicted class for the batch X
+        the predicted class/value for the batch X
         """
-        return np.argmax(self(X), axis=1)
+        if self.model_type == "classification":
+            return np.argmax(self(X), axis=1)
+        else:
+            return self(X)
 
 
     def cost(self, X : np.ndarray, y : np.ndarray) -> float:
         """
         Compute cost function
         """
-        return cost(self, X, y)
+        return cost(self, self.model_type, X, y)
 
 
-    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
         """
         Fit the MPS to the data
 
@@ -227,11 +238,8 @@ class MpsClass:
 
         epochs : int
         number of epochs
-
-        early_stop : bool
-        stop as soon as overfitting is detected (needs a validation dataset)
         """
-        self.train_costs, self.valid_costs = fit_classification(self, X_train, y_train, X_valid, y_valid, learn_rate, batch_size, epochs, early_stop)
+        self.train_costs, self.valid_costs = fit(self, self.model_type, X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
 
