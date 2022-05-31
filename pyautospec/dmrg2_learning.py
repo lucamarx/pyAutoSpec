@@ -25,8 +25,8 @@ def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
     Gradient of
 
-         1         l                2
-    C = --- Σ  Σ (f(X_n) - ẟ(l,y_n))
+         1         l        l  2
+    C = --- Σ  Σ (f(X_n) - c_n)
          2   n  l
 
     is computed as
@@ -42,6 +42,10 @@ def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
                        │          │     │     │     │          │
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
+    c_l is
+
+    - ẟ(l,y_n) for classification
+    - y for regression
     """
     batch_size = X.shape[0]
 
@@ -148,8 +152,8 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
     Gradient of
 
-         1         l                2
-    C = --- Σ  Σ (f(X_n) - ẟ(l,y_n))
+         1         l        l  2
+    C = --- Σ  Σ (f(X_n) - c_n)
          2   n  l
 
     is computed as
@@ -165,6 +169,11 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
                        │          │     │     │     │          │
                        ◯          ◯     ◯     ◯     ◯          ◯
                              L        x[k]  x[k+1]       R
+
+    c_l is
+
+    - ẟ(l,y_n) for classification
+    - y for regression
     """
     batch_size = X.shape[0]
 
@@ -265,6 +274,23 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
     return j+1
 
 
+def _validate_dataset(mps, X : np.ndarray, y : np.ndarray, tp : str):
+    """
+    Validate training/validation dataset
+    """
+    if len(X.shape) != 3:
+        raise Exception("invalid data")
+
+    if X.shape[0] != y.shape[0]:
+        raise Exception("invalid shape for X_{},y_{} (wrong sample number)".format(tp, tp))
+
+    if X.shape[1] != len(mps):
+        raise Exception("invalid shape for X_{} (wrong particle number)".format(tp))
+
+    if X.shape[2] != mps.part_d:
+        raise Exception("invalid shape for X_{} (wrong particle dimension)".format(tp))
+
+
 def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10) -> Tuple[List[float], List[float]]:
     """Fit the MPS to the data
 
@@ -310,17 +336,10 @@ def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_val
     if model_type not in ["regression", "classification"]:
         raise Exception("model_type must be either 'regression' or 'classification'")
 
-    if len(X_train.shape) != 3:
-        raise Exception("invalid data")
+    _validate_dataset(mps, X_train, y_train, "train")
 
-    if X_train.shape[0] != y_train.shape[0]:
-        raise Exception("invalid shape for X,y (wrong sample number)")
-
-    if X_train.shape[1] != len(mps):
-        raise Exception("invalid shape for X (wrong particle number)")
-
-    if X_train.shape[2] != mps.part_d:
-        raise Exception("invalid shape for X (wrong particle dimension)")
+    if X_valid is not None and y_valid is not None:
+        _validate_dataset(mps, X_train, y_train, "valid")
 
     if model_type == "regression" and len(y_train.shape) == 1:
         y_train = y_train.reshape((-1,1))
@@ -363,11 +382,11 @@ def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_val
             valid_cost = cost(mps, model_type, X_valid, y_valid)
             valid_costs.append(valid_cost)
 
-            if epoch % 10 == 0:
+            if epochs < 10 or epoch % 10 == 0:
                 print("epoch {:4d}: train {:.2f} | valid {:.2f}".format(epoch, train_cost, valid_cost))
 
         else:
-            if epoch % 10 == 0:
+            if epochs < 10 or epoch % 10 == 0:
                 print("epoch {:4d}: {:.2f}".format(epoch, train_cost))
 
     return train_costs, valid_costs
