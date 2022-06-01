@@ -34,6 +34,8 @@ setup(
         "scikit-learn>=1.0.2",
         "matplotlib>=3.3.4",
         "graphviz>=0.19.0",
+        "seaborn>=0.11.2",
+        "pandas>=1.4.2",
         "tqdm>=4.62.0",
         "jaxlib>=0.3.0",
         "jax>=0.3.0",
