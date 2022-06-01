@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from pyautospec import Mps
-from pyautospec.dmrg_learning import ContractionCache, _contract_left, _split, _merge, _gradient
+from pyautospec.dmrg_learning import ContractionCache, _contract_left, _contract_right, _split, _merge, _gradient, _move_pivot
 
 
 class TestMps(unittest.TestCase):
@@ -161,8 +161,7 @@ class TestMps(unittest.TestCase):
         p = 5
         mps = Mps(N=64, part_d=p)
 
-        X = np.random.rand(16, 64, p)
-        y = np.random.rand(16)
+        X, y = np.random.rand(16, 64, p), np.random.rand(16)
 
         B_head = _merge(mps, 0)
 
@@ -191,17 +190,17 @@ class TestMps(unittest.TestCase):
     #     p = 5
     #     mps = Mps(N=64, part_d=p)
 
-    #     X = np.random.rand(16, 64, p)
+    #     X, y = np.random.rand(16, 64, p), np.random.rand(16)
 
-    #     mps._initialize_cache(X)
+    #     cache = ContractionCache(mps, X)
 
     #     # sweep right to left
     #     n = mps.N-2
     #     while True:
-    #         B = mps._merge(n)
+    #         # B = _merge(mps, n)
 
-    #         G1 = mps._gradient(n, B, X)
-    #         G2 = mps._gradient(n, B, X, use_cache=True)
+    #         G1 = _gradient(mps, n, X, y)
+    #         G2 = _gradient(mps, n, X, y, cache=cache)
 
     #         self.assertTrue(np.allclose(G1, G2),
     #                         msg="gradient calculations with or without caching must agree at {} (right to left)".format(n))
@@ -210,17 +209,17 @@ class TestMps(unittest.TestCase):
     #             self.assertTrue(self.is_left_canonical(mps, n-1),
     #                             msg="chain must be left canonical at {} before moving pivot".format(n-1))
 
-    #             self.assertTrue(np.allclose(mps._contract_left(n-1, X), mps.cache[n-1]),
+    #             self.assertTrue(np.allclose(_contract_left(mps, n-1, X), cache[n-1]),
     #                             msg="cache must be consistent with left contraction at {} before moving pivot".format(n-1))
 
     #         if n+2 < mps.N:
     #             self.assertTrue(self.is_right_canonical(mps, n+2),
     #                             msg="chain must be right canonical at {} before moving pivot".format(n+2))
 
-    #             self.assertTrue(np.allclose(mps._contract_right(n+2, X), mps.cache[n+2]),
+    #             self.assertTrue(np.allclose(_contract_right(mps, n+2, X), cache[n+2]),
     #                             msg="cache must be consistent with right contraction at {} before moving pivot".format(n-1))
 
-    #         m = mps._move_pivot(X, n, 0.1, "right2left")
+    #         m = _move_pivot(mps, X, y, n, 0.1, "right2left")
 
     #         self.assertTrue(m == n-1,
     #                         msg="pivot must move from right to left")
@@ -229,14 +228,14 @@ class TestMps(unittest.TestCase):
     #             self.assertTrue(self.is_left_canonical(mps, n-1),
     #                             msg="chain must be left canonical at {} after moving pivot".format(n-1))
 
-    #             self.assertTrue(np.allclose(mps._contract_left(n-1, X), mps.cache[n-1]),
+    #             self.assertTrue(np.allclose(_contract_left(mps, n-1, X), cache[n-1]),
     #                             msg="cache must be consistent with left contraction at {} after moving pivot".format(n-1))
 
     #         if n+2 < mps.N:
     #             self.assertTrue(self.is_right_canonical(mps, n+2),
     #                             msg="chain must be right canonical at {} after moving pivot".format(n+2))
 
-    #             self.assertTrue(np.allclose(mps._contract_right(n+2, X), mps.cache[n+2]),
+    #             self.assertTrue(np.allclose(_contract_right(mps, n+2, X), cache[n+2]),
     #                             msg="cache must be consistent with right contraction at {} after moving pivot".format(n-1))
 
     #         n = m
