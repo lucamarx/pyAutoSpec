@@ -3,7 +3,7 @@ pyAutoSpec module setup
 """
 from setuptools import setup
 
-VERSION = "0.7.3"
+VERSION = "0.8.1"
 
 setup(
     name="pyAutoSpec",
@@ -38,8 +38,7 @@ setup(
         "jaxlib>=0.3.0",
         "jax>=0.3.0",
     ],
-    # coming soon...
-    # extras_require={
-    #     "test": ["unittest"]
-    # }
+    extras_require={
+        "test": ["unittest"]
+    }
 )
