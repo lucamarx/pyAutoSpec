@@ -4,6 +4,7 @@ Utilities to load datasets
 import numpy as np
 import os, gzip, hashlib
 
+from typing import Tuple
 from tqdm.auto import tqdm
 from urllib.request import urlopen
 
@@ -28,7 +29,7 @@ def fetch(url, temp_dir):
     return np.frombuffer(gzip.decompress(data), dtype=np.uint8).copy()
 
 
-def load_mnist(N=None, fmt=None, test=False, temp_dir="./.pyautospec_data"):
+def load_mnist(N : int = None, fmt : str = None, test : bool = False, temp_dir : str = "./.pyautospec_data") -> Tuple[np.ndarray]:
     """
     Load the MNIST dataset
 
@@ -38,7 +39,13 @@ def load_mnist(N=None, fmt=None, test=False, temp_dir="./.pyautospec_data"):
     if it is not None sample N items
 
     fmt : str
+    dataset format (28x28, 16x16, 14x14)
 
+    test : bool
+    load test data
+
+    temp_dir : str
+    temp directory for downloaded files
 
     Returns:
     --------
@@ -52,7 +59,7 @@ def load_mnist(N=None, fmt=None, test=False, temp_dir="./.pyautospec_data"):
         B = np.random.randint(0, X.shape[0], size=N)
         X, y = X[B,:,:], y[B]
 
-    if fmt is None:
+    if fmt is None or fmt == "28x28":
         X1 = X
 
     elif fmt == "16x16":
