@@ -28,7 +28,7 @@ Installation
 
 To build the library just run
 
-    python setup.py install
+    pip install -e .
 
 Or use the provided docker file:
 

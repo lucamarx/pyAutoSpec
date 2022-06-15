@@ -23,11 +23,11 @@ USER jupyter
 
 RUN python3 -m venv /workspace/venv && \
     /workspace/venv/bin/pip install --no-cache-dir --upgrade pip && \
-    /workspace/venv/bin/pip install --no-cache-dir jupyter matplotlib tabulate
+    /workspace/venv/bin/pip install --no-cache-dir jupyter tabulate
 
 COPY --chown=jupyter . /workspace/pyautospec
 RUN cd /workspace/pyautospec && \
-    /workspace/venv/bin/python setup.py install
+    /workspace/venv/bin/pip install -e .
 
 EXPOSE 8888
 CMD ["/workspace/venv/bin/jupyter", "notebook", "--port=8888", "--ip=0.0.0.0", "--no-browser", "--notebook-dir=/workspace"]
