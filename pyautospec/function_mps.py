@@ -4,7 +4,7 @@ Mps based function compression algorithm
 import numpy as np
 import itertools
 
-from typing import List
+from typing import List, Tuple
 
 from .mps import Mps
 from .plots import function_wfa_comparison_chart
@@ -148,3 +148,10 @@ class FunctionMps():
         self.model.fit(one_hot(len(self.model), self.model.part_d, np.array([t[0] for t in data])), np.array([t[1] for t in data]), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
 
         return self
+
+
+    def paths_weights(self, x : float) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Enumerate all paths contributing to the final value
+        """
+        return self.model.paths_weights(self._encode(x)[0,:,:])
