@@ -1,7 +1,6 @@
 """
-Various wfa plots
+Various wfa/mps plots
 """
-import itertools
 import numpy as np
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -9,73 +8,42 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from typing import List
-from jax import jit, vmap
 
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
 
 
-@jit
-def path_weight(alpha, A, omega, X, path):
-    """
-    Compute the weight of a path in the state graph corresponding to a word X
-    """
-    weight = alpha[path[0]]
-
-    for i in range(1, path.shape[0]):
-        p, q = path[i-1], path[i]
-        weight *= A[p, X[i-1], q]
-
-    weight *= omega[path[path.shape[0] - 1]]
-
-    return weight
-
-
-def word_paths(alpha, A, omega, X, threshold):
-    """
-    Enumerate all paths contributing to final weight
-    """
-    paths = jnp.array(list(itertools.product(*([range(0, alpha.shape[0])] * (1 + len(X))))), dtype=jnp.int32)
-    weights = vmap(lambda p: path_weight(alpha, A, omega, X, p), in_axes=0)(paths)
-
-    indexes = jnp.where(weights > threshold)[0]
-    paths, weights = paths[indexes,:], weights[indexes]
-
-    res = []
-    for i in range(0, indexes.shape[0]):
-        res.append(([(j, paths[i,j].item()) for j in range(0, paths.shape[1])], weights[i].item()))
-
-    return res
-
-
-def transition_plot(wfa, X : List[str], threshold : float = 1e-4):
+def transition_plot(n_states : int, word_len : int, paths : np.ndarray, weights : np.ndarray, title : str = ""):
     """
     Plot weight contributions
     """
     _, host = plt.subplots(figsize=(12,4))
 
-    host.set_title("'{}' → {:.4f}".format(X, wfa(X)), fontsize=18, pad=25)
-    host.set_xlim(0, len(X))
+    host.set_title(title, fontsize=18, pad=25)
+    host.set_xlim(0, word_len)
     host.set_xticks([], labels=None)
 
-    axes = [host] + [host.twinx() for _ in range(len(X))]
+    axes = [host] + [host.twinx() for _ in range(word_len)]
 
     for i, ax in enumerate(axes):
-        ax.set_ylim(0, len(wfa) - 1)
-        ax.set_yticks(range(len(wfa)), labels=None)
+        ax.set_ylim(0, n_states-1)
+        ax.set_yticks(range(n_states), labels=None)
         ax.spines['top'].set_visible(False)
         ax.spines['bottom'].set_visible(False)
         if ax != host:
             ax.spines['left'].set_visible(False)
-            ax.spines["right"].set_position(("axes", i / len(X)))
+            ax.spines["right"].set_position(("axes", i / word_len))
 
-    paths = word_paths(wfa.alpha, wfa.A, wfa.omega, [wfa.alphabet_map[a] for a in X], threshold)
     colors = plt.cm.Set2.colors
-    max_weight = max([abs(p[1]) for p in paths])
+    max_weight = np.max(np.abs(weights))
+
+    pws = []
+    for i in range(paths.shape[0]):
+        pws.append(([(j, paths[i,j].item()) for j in range(paths.shape[1])], weights[i].item()))
 
     c = 0
-    for path in paths:
+    for path in pws:
         verts = path[0]
         codes = [Path.MOVETO] + [Path.LINETO for _ in range(len(verts) - 1)]
         weight = path[1]

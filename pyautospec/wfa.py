@@ -2,11 +2,12 @@
 Weighted finite automaton implemented as a matrix product state
 """
 import graphviz
+import itertools
 import numpy as np
 import jax.numpy as jnp
 
-from jax import jit
-from typing import List
+from jax import jit, vmap
+from typing import List, Tuple
 from tqdm.auto import tqdm
 
 from .plots import transition_plot
@@ -20,6 +21,22 @@ def evaluate(alpha, A, omega, X):
     for i in range(0, len(X)):
         y = jnp.dot(y, A[:,X[i],:])
     return jnp.dot(y, omega)
+
+
+@jit
+def path_weight(alpha, A, omega, X, path):
+    """
+    Compute the weight of a path in the state graph corresponding to a word X
+    """
+    weight = alpha[path[0]]
+
+    for i in range(1, path.shape[0]):
+        p, q = path[i-1], path[i]
+        weight *= A[p, X[i-1], q]
+
+    weight *= omega[path[path.shape[0] - 1]]
+
+    return weight
 
 
 class Wfa:
@@ -170,11 +187,29 @@ class Wfa:
         return dot
 
 
+    def paths_weights(self, X : List[str]) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        """
+        Enumerate all paths contributing to final weight
+        """
+        X = [self.alphabet_map[a] for a in X]
+
+        paths = jnp.array(list(itertools.product(*([range(0, self.alpha.shape[0])] * (1 + len(X))))), dtype=jnp.int32)
+
+        weights = vmap(lambda p: path_weight(self.alpha, self.A, self.omega, X, p), in_axes=0)(paths)
+
+        return paths, weights
+
+
     def transition_plot(self, X : List[str], threshold : float = 1e-4):
         """
         Plot weight contributions
         """
-        transition_plot(self, X, threshold)
+        paths, weights = self.paths_weights(X)
+
+        indexes = jnp.where(weights > threshold)[0]
+        paths, weights = paths[indexes,:], weights[indexes]
+
+        transition_plot(len(self), len(X), paths, weights, title = "'{}' → {:.4f}".format(X, self(X)))
 
 
 class SpectralLearning():
