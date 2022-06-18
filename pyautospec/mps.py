@@ -265,7 +265,7 @@ class Mps:
         training_chart(self.train_costs, self.valid_costs)
 
 
-    def paths_weights(self, X : np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray, float]:
         """
         Enumerate all paths contributing to the final value
         """
@@ -291,4 +291,15 @@ class Mps:
         # compute individual weights
         weights = vmap(lambda p: path_weight(A, p), in_axes=0)(paths)
 
-        return paths, weights
+        # convert weights to "probabilities" to have a meaningful entropy
+        P = jnp.abs(weights)
+        P = P / jnp.sum(P)
+
+        if threshold is not None:
+            idxs = jnp.where(P > threshold)[0]
+            paths, weights, P = paths[idxs,:], weights[idxs], P[idxs]
+
+        # compute entropy
+        S = - jnp.sum(P * jnp.log2(P)).item()
+
+        return paths, weights, S
