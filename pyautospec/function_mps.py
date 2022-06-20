@@ -150,7 +150,7 @@ class FunctionMps():
         return self
 
 
-    def paths_weights(self, x : float, threshold : float = None) -> Tuple[np.ndarray, np.ndarray, float]:
+    def paths_weights(self, x : float, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Enumerate all paths contributing to the final value
         """

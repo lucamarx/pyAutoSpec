@@ -29,6 +29,25 @@ def path_weight(A : List[jnp.ndarray], path : jnp.ndarray) -> float:
     return weight
 
 
+def contributing_paths(paths : jnp.ndarray, weights : jnp.ndarray, threshold : float, partial : List[Tuple[jnp.ndarray, float]] = []) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    """
+    Find paths that provide net contributions to final weight
+    """
+    i_max, i_min = jnp.argmax(weights), jnp.argmin(weights)
+
+    if abs(weights[i_max]) > abs(weights[i_min]):
+        partial.append((paths[i_max], weights[i_max].item()))
+        weights = weights.at[i_max].set(0)
+    else:
+        partial.append((paths[i_min], weights[i_min].item()))
+        weights = weights.at[i_min].set(0)
+
+    if abs(jnp.sum(weights)) < threshold:
+        return jnp.array([t[0] for t in partial]), jnp.array([t[1] for t in partial]), weights
+    else:
+        return contributing_paths(paths, weights, threshold, partial=partial)
+
+
 class Mps:
     """
     Matrix Product State
@@ -265,7 +284,7 @@ class Mps:
         training_chart(self.train_costs, self.valid_costs)
 
 
-    def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray, float]:
+    def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Enumerate all paths contributing to the final value
         """
@@ -291,15 +310,7 @@ class Mps:
         # compute individual weights
         weights = vmap(lambda p: path_weight(A, p), in_axes=0)(paths)
 
-        # convert weights to "probabilities" to have a meaningful entropy
-        P = jnp.abs(weights)
-        P = P / jnp.sum(P)
-
         if threshold is not None:
-            idxs = jnp.where(P > threshold)[0]
-            paths, weights, P = paths[idxs,:], weights[idxs], P[idxs]
+            paths, weights, _ = contributing_paths(paths, weights.copy(), threshold, partial=[])
 
-        # compute entropy
-        S = - jnp.sum(P * jnp.log2(P)).item()
-
-        return paths, weights, S
+        return np.array(paths), np.array(weights)
