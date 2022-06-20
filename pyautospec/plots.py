@@ -87,6 +87,36 @@ def function_wfa_comparison_chart(wfa, n_points : int = 50, resolution : int = 1
     plt.legend()
 
 
+def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : float = None):
+    """
+    Compare the learned wfa with the original function
+    """
+    xs = jnp.linspace(mps.x0, mps.x1, endpoint = False, num = n_points)
+
+    v0 = jnp.array([mps.f(x) for x in xs])
+    v1 = jnp.array([mps(x) for x in xs])
+
+    error = jnp.abs(v1 - v0)
+
+    _, ax1 = plt.subplots()
+
+    plt.title("{} reconstruction error: avg={:.2f} max={:.2f} ".format(mps.f.__repr__(), jnp.average(error), jnp.max(error)))
+
+    ax1.set_xlabel("x")
+    ax1.set_ylabel("f(x)")
+
+    p1 = ax1.plot(xs, v0, color="green", label="original f")
+    p2 = ax1.plot(xs, v1, color="orange", label="f")
+    ls = p1 + p2
+
+    if paths_threshold is not None:
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("contrib. paths")
+        ls += ax2.plot(xs, [mps.paths_weights(x, threshold=paths_threshold)[0].shape[0] for x in xs], color="blue", label="paths n.")
+
+    plt.legend(ls, [l.get_label() for l in ls], loc=0)
+
+
 def parallel_plot(X : np.ndarray, y : np.ndarray, feature_names : List[str] = None, target_names : List[str] = None, title : str = "Parallel Plot"):
     """
     Plot multidimensional dataset as a parallel plot

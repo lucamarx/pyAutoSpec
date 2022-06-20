@@ -7,7 +7,7 @@ import itertools
 from typing import List, Tuple
 
 from .mps import Mps
-from .plots import function_wfa_comparison_chart
+from .plots import function_mps_comparison_chart
 
 
 def word2real(s : List[int], x0 : float = 0.0, x1 : float = 1.0) -> float:
@@ -98,7 +98,7 @@ class FunctionMps():
         return self.model(self._encode(x))[0]
 
 
-    def comparison_chart(self, n_points : int = 50):
+    def comparison_chart(self, n_points : int = 50, paths_threshold : float = None):
         """
         Compare the two functions
 
@@ -107,8 +107,12 @@ class FunctionMps():
 
         n_points : int
         the number of points in the plot
+
+        paths_threshold : float
+        if it is not none displays a second plot with the number of the paths
+        that contribute more than `paths_threshold` to the final value
         """
-        function_wfa_comparison_chart(self, n_points, None, plot_derivative = False)
+        function_mps_comparison_chart(self, n_points=n_points, paths_threshold=paths_threshold)
 
 
     def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
