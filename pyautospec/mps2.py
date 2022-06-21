@@ -1,12 +1,51 @@
 """
 Matrix product state class
 """
-import numpy as np
+import itertools
 
-from typing import List
+import numpy as np
+import jax.numpy as jnp
+
+from jax import jit, vmap
+from typing import List, Tuple
 
 from .plots import training_chart
 from .dmrg2_learning import cost, fit
+
+
+@jit
+def path_weight(A : List[jnp.ndarray], path : jnp.ndarray) -> float:
+    """
+    Compute the weight of a path in the state graph
+    """
+    weight = A[0][path[0]]
+
+    for i in range(1, path.shape[0]):
+        p, q = path[i-1], path[i]
+        weight *= A[i][p, q]
+
+    weight *= A[-1][path[-1]]
+
+    return weight
+
+
+def contributing_paths(paths : jnp.ndarray, weights : jnp.ndarray, threshold : float, partial : List[Tuple[jnp.ndarray, float]] = []) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    """
+    Find paths that provide net contributions to final weight
+    """
+    i_max, i_min = jnp.argmax(weights), jnp.argmin(weights)
+
+    if abs(weights[i_max]) > abs(weights[i_min]):
+        partial.append((paths[i_max], weights[i_max].item()))
+        weights = weights.at[i_max].set(0)
+    else:
+        partial.append((paths[i_min], weights[i_min].item()))
+        weights = weights.at[i_min].set(0)
+
+    if abs(jnp.sum(weights)) < threshold:
+        return jnp.array([t[0] for t in partial]), jnp.array([t[1] for t in partial]), weights
+    else:
+        return contributing_paths(paths, weights, threshold, partial=partial)
 
 
 class Mps2:
@@ -276,3 +315,35 @@ class Mps2:
             raise Exception("the model has not been trained yet")
 
         training_chart(self.train_costs, self.valid_costs)
+
+
+    def paths_weights(self, X : np.ndarray, l : int = 0, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Enumerate all paths contributing to the final value
+        """
+        if X.ndim != 2:
+            raise Exception("X must contain a single v-word")
+
+        if X.shape[0] < self.N:
+            raise Exception("X is too short")
+
+        if X.shape[1] != self.part_d:
+            raise Exception("invalid particle dimension")
+
+        A = []
+        # contract MPS with v-word
+        A.append(np.einsum("pj,p->j", self[0], X[0,:]))
+        for i in range(1, len(self)-1):
+            A.append(np.einsum("ipj,p->ij", self[i], X[i,:]))
+        A.append(np.einsum("ip,p->i", self[-1][:,:,l], X[-1,:]))
+
+        # enumerate all paths
+        paths = jnp.array(list(itertools.product(*([range(A[i].shape[0]) for i in range(1,len(A))]))), dtype=jnp.int32)
+
+        # compute individual weights
+        weights = vmap(lambda p: path_weight(A, p), in_axes=0)(paths)
+
+        if threshold is not None:
+            paths, weights, _ = contributing_paths(paths, weights.copy(), threshold, partial=[])
+
+        return np.array(paths), np.array(weights)

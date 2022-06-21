@@ -3,6 +3,8 @@ Mps based classification/regression
 """
 import numpy as np
 
+from typing import Tuple
+
 from .mps2 import Mps2
 
 
@@ -162,3 +164,13 @@ class DatasetMps():
             return np.average((t == 0).astype(int))
         else:
             return np.average(np.square(self(X) - y))
+
+
+    def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Enumerate all paths contributing to the final value
+        """
+        if self.model.model_type == "classification":
+            return self.model.paths_weights(data2vector(X, x0=self.x0, x1=self.x1)[0,:], l=self.predict(X)[0], threshold=threshold)
+        else:
+            return self.model.paths_weights(data2vector(X, x0=self.x0, x1=self.x1)[0,:], l=0, threshold=threshold)
