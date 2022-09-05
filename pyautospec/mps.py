@@ -286,7 +286,12 @@ class Mps:
 
     def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Enumerate all paths contributing to the final value
+        Enumerate all paths contributing to the final value. If threshold is
+        specified include only paths that contribute
+
+        total absolute weight * threshold
+
+        weight to the total
         """
         if X.ndim != 2:
             raise Exception("X must contain a single v-word")
@@ -296,6 +301,9 @@ class Mps:
 
         if X.shape[1] != self.part_d:
             raise Exception("invalid particle dimension")
+
+        if threshold is not None and (threshold <= 0 or threshold >= 1):
+            raise Exception("invalid threshold, it must be > 0 and < 1")
 
         A = []
         # contract MPS with v-word
@@ -311,6 +319,6 @@ class Mps:
         weights = vmap(lambda p: path_weight(A, p), in_axes=0)(paths)
 
         if threshold is not None:
-            paths, weights, _ = contributing_paths(paths, weights.copy(), threshold, partial=[])
+            paths, weights, _ = contributing_paths(paths, weights.copy(), abs(jnp.sum(weights)) * threshold, partial=[])
 
         return np.array(paths), np.array(weights)
