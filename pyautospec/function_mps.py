@@ -98,6 +98,21 @@ class FunctionMps():
         return self.model(self._encode(x))[0]
 
 
+    def __mul__(self, b):
+        """
+        Compute the scalar product of the underlying models
+
+        ╭───┐ ╭───┐ ╭───┐       ╭───┐
+        │A_1├─┤A_2├─┤A_3├─ ... ─┤A_n│
+        └─┬─┘ └─┬─┘ └─┬─┘       └─┬─┘
+        ╭─┴─┐ ╭─┴─┐ ╭─┴─┐       ╭─┴─┐
+        │B_1├─┤B_2├─┤B_3├─ ... ─┤B_n│
+        └───┘ └───┘ └───┘       └───┘
+
+        """
+        return self.model.__mul__(b.model)
+
+
     def comparison_chart(self, n_points : int = 50, paths_threshold : float = None):
         """
         Compare the two functions

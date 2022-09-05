@@ -204,6 +204,35 @@ class Mps:
         return T
 
 
+    def __mul__(self, b):
+        """
+        Compute the scalar product with Mps b
+
+        ╭───┐ ╭───┐ ╭───┐       ╭───┐
+        │A_1├─┤A_2├─┤A_3├─ ... ─┤A_n│
+        └─┬─┘ └─┬─┘ └─┬─┘       └─┬─┘
+        ╭─┴─┐ ╭─┴─┐ ╭─┴─┐       ╭─┴─┐
+        │B_1├─┤B_2├─┤B_3├─ ... ─┤B_n│
+        └───┘ └───┘ └───┘       └───┘
+        """
+        a = self
+
+        if a.part_d != b.part_d:
+            raise Exception("arguments have different particle dimensions")
+
+        if len(a) != len(b):
+            raise Exception("arguments have different lengths")
+
+        s = np.einsum("pj,pk->jk", a.mps[0], b.mps[0])
+
+        for n in range(1,len(a)-1):
+            s = np.einsum("jk,jpl,kpm->lm", s, a.mps[n], b.mps[n])
+
+        s = np.einsum("jk,jp,kp->", s, a.mps[-1], b.mps[-1])
+
+        return s
+
+
     def predict(self, X : np.ndarray) -> np.ndarray:
         """
         Evaluate MPS on batch X[b,n,p]
