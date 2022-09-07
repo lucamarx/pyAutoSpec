@@ -29,23 +29,55 @@ def path_weight(A : List[jnp.ndarray], path : jnp.ndarray) -> float:
     return weight
 
 
-def contributing_paths(paths : jnp.ndarray, weights : jnp.ndarray, threshold : float, partial : List[Tuple[jnp.ndarray, float]] = []) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+def contributing_paths(paths : np.ndarray, weights : np.ndarray, threshold : float) -> Tuple[np.ndarray, np.ndarray]:
     """
-    Find paths that provide net contributions to final weight
+    Find paths that provide net contributions to final weight. If a
+    threshold is specified discard the lowest weights
     """
-    i_max, i_min = jnp.argmax(weights), jnp.argmin(weights)
+    # sort weights
+    sort_idx = np.argsort(weights)
+    wgt = weights[sort_idx]
 
-    if abs(weights[i_max]) > abs(weights[i_min]):
-        partial.append((paths[i_max], weights[i_max].item()))
-        weights = weights.at[i_max].set(0)
-    else:
-        partial.append((paths[i_min], weights[i_min].item()))
-        weights = weights.at[i_min].set(0)
+    # separate positive and negative weights
+    p, n = wgt[wgt>0], np.flip(-wgt[wgt<0])
 
-    if abs(jnp.sum(weights)) < threshold:
-        return jnp.array([t[0] for t in partial]), jnp.array([t[1] for t in partial]), weights
-    else:
-        return contributing_paths(paths, weights, threshold, partial=partial)
+    zero_idx = np.argmin(wgt < 0)
+
+    i = j = 0
+    # find 1-to-1 matches of a positive and a negative weights and cancel them
+    while i < p.shape[0] and j < n.shape[0]:
+
+        assert(p[i] == weights[sort_idx[zero_idx+i]])
+        assert(n[j] == -weights[sort_idx[zero_idx-j-1]])
+
+        if abs(p[i] - n[j]) < 1e-8:
+            p[i] = n[j] = 0
+
+            # cancel the original unsorted weights
+            weights[sort_idx[zero_idx+i]] = weights[sort_idx[zero_idx-j-1]] = 0
+
+            i += 1
+            j += 1
+
+            continue
+
+        # bring up another match
+        if p[i] < n[j]:
+            i += 1
+        else:
+            j += 1
+
+    # discard lowest weights
+    if threshold is not None:
+        cp, cn = np.cumsum(p), np.cumsum(n)
+        ci, cj = np.argmin(cp < np.sum(p)*threshold), np.argmin(cn < np.sum(n)*threshold)
+
+        weights[sort_idx[zero_idx:zero_idx+ci]] = 0
+        weights[sort_idx[zero_idx-cj-1:zero_idx-1]] = 0
+
+    nz_idx = np.nonzero(weights)
+
+    return paths[nz_idx], weights[nz_idx]
 
 
 class Mps:
@@ -316,11 +348,8 @@ class Mps:
     def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Enumerate all paths contributing to the final value. If threshold is
-        specified include only paths that contribute
-
-        total absolute weight * threshold
-
-        weight to the total
+        specified discard paths that contribute for less than threshold% to the
+        total weight
         """
         if X.ndim != 2:
             raise Exception("X must contain a single v-word")
@@ -348,6 +377,6 @@ class Mps:
         weights = vmap(lambda p: path_weight(A, p), in_axes=0)(paths)
 
         if threshold is not None:
-            paths, weights, _ = contributing_paths(paths, weights.copy(), abs(jnp.sum(weights)) * threshold, partial=[])
-
-        return np.array(paths), np.array(weights)
+            return contributing_paths(np.array(paths), np.array(weights.copy()), threshold)
+        else:
+            return np.array(paths), np.array(weights)
