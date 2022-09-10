@@ -141,6 +141,9 @@ class Mps:
             else:
                 self[n+1] = np.einsum("i,ij,jq->iq", s, v, self[n+1])
 
+        # initialize singular values cache
+        self.singular_values = [None] * (N-1)
+
         # initialize training/validation costs
         self.train_costs, self.valid_costs = [], []
 
@@ -380,3 +383,16 @@ class Mps:
             return contributing_paths(np.array(paths), np.array(weights.copy()), threshold)
         else:
             return np.array(paths), np.array(weights)
+
+
+    def entanglement_entropy(self, n : int = None) -> float:
+        """
+        Compute the entanglement entropy between the first n and the
+        remaining (N-n) particles
+        """
+        if n is None:
+            sv2s = [np.square(sv / np.sum(sv)) for sv in self.singular_values]
+            return [-np.einsum("i,i->", sv2, np.log2(sv2)).item() for sv2 in sv2s]
+        else:
+            sv2 = np.square(self.singular_values[n] / np.sum(self.singular_values[n]))
+            return -np.einsum("i,i->", sv2, np.log2(sv2)).item()
