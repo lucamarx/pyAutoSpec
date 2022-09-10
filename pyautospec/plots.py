@@ -117,6 +117,22 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
 
 
+def mps_entanglement_entropy_chart(mps):
+    """
+    Plot entanglement entropy chart
+    """
+    plt.figure()
+
+    plt.title('Left/Right Entanglement Entropy')
+
+    plt.xlabel('left block size')
+    plt.ylabel('entropy')
+
+    S = mps.entanglement_entropy()
+
+    plt.bar(range(1, len(S)+1), S)
+
+
 def parallel_plot(X : np.ndarray, y : np.ndarray, feature_names : List[str] = None, target_names : List[str] = None, title : str = "Parallel Plot"):
     """
     Plot multidimensional dataset as a parallel plot

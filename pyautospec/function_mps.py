@@ -7,7 +7,7 @@ import itertools
 from typing import List, Tuple
 
 from .mps import Mps
-from .plots import function_mps_comparison_chart
+from .plots import function_mps_comparison_chart, mps_entanglement_entropy_chart
 
 
 def word2real(s : List[int], x0 : float = 0.0, x1 : float = 1.0) -> float:
@@ -128,6 +128,13 @@ class FunctionMps():
         that contribute more than `paths_threshold` to the final value
         """
         function_mps_comparison_chart(self, n_points=n_points, paths_threshold=paths_threshold)
+
+
+    def entanglement_entropy_chart(self):
+        """
+        Plot entanglement entropy chart
+        """
+        mps_entanglement_entropy_chart(self.model)
 
 
     def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
