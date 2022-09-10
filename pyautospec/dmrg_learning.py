@@ -139,12 +139,12 @@ def _split(mps, k : int, B : np.ndarray, left : bool = True) -> np.ndarray:
         u = np.einsum("ij,j->ij", u, s)
 
     if k == 0:
-        return u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+        return u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out)), s[0:bond_d]
 
     if k == mps.N-2:
-        return u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d))
+        return u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d)), s[0:bond_d]
 
-    return u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+    return u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out)), s[0:bond_d]
 
 
 def _contract_left(mps, k : int, X :np.ndarray) -> np.ndarray:
@@ -250,10 +250,12 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
 
     B -= learn_rate * G
 
-    A1, A2 = _split(mps, n, B, left=(direction == "left2right"))
+    A1, A2, S = _split(mps, n, B, left=(direction == "left2right"))
 
     mps[n]   = A1
     mps[n+1] = A2
+
+    mps.singular_values[n] = S
 
     if direction == "right2left":
         if cache is not None:
