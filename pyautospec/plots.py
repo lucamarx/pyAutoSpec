@@ -125,12 +125,13 @@ def mps_entanglement_entropy_chart(mps):
 
     plt.title('Left/Right Entanglement Entropy')
 
-    plt.xlabel('left block size')
+    plt.xlabel('left-right block sizes')
     plt.ylabel('entropy')
 
     S = mps.entanglement_entropy()
 
-    plt.bar(range(1, len(S)+1), S)
+    plt.bar(range(1, len(S)+1), S,
+        tick_label=["{}-{}".format(l, len(S)+1-l) for l in range(1, len(S)+1)])
 
 
 def parallel_plot(X : np.ndarray, y : np.ndarray, feature_names : List[str] = None, target_names : List[str] = None, title : str = "Parallel Plot"):
