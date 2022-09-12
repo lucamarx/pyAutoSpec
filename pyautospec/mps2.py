@@ -333,6 +333,9 @@ class Mps2:
         if X.shape[1] != self.part_d:
             raise Exception("invalid particle dimension")
 
+        if threshold is not None and (threshold <= 0 or threshold >= 1):
+            raise Exception("invalid threshold, it must be > 0 and < 1")
+
         A = []
         # contract MPS with v-word
         A.append(np.einsum("pj,p->j", self[0], X[0,:]))
