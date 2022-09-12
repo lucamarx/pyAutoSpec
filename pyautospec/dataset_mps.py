@@ -6,6 +6,7 @@ import numpy as np
 from typing import Tuple
 
 from .mps2 import Mps2
+from .plots import mps_entanglement_entropy_chart
 
 
 def data2vector(X : np.ndarray, x0 : np.ndarray, x1 : np.ndarray) -> np.ndarray:
@@ -94,6 +95,13 @@ class DatasetMps():
         the estimated class/value
         """
         return self(X)
+
+
+    def entanglement_entropy_chart(self):
+        """
+        Plot entanglement entropy chart
+        """
+        mps_entanglement_entropy_chart(self.model)
 
 
     def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50):
