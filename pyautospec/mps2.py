@@ -350,3 +350,16 @@ class Mps2:
             paths, weights, _ = contributing_paths(paths, weights.copy(), threshold, partial=[])
 
         return np.array(paths), np.array(weights)
+
+
+    def entanglement_entropy(self, n : int = None) -> float:
+        """
+        Compute the entanglement entropy between the first n and the
+        remaining (N-n) particles
+        """
+        if n is None:
+            sv2s = [sv2 / np.sum(sv2) for sv2 in [np.square(sv) for sv in self.singular_values]]
+            return [-np.einsum("i,i->", sv2, np.log2(sv2)).item() for sv2 in sv2s]
+        else:
+            sv2 = np.square(self.singular_values[n]) / np.sum(np.square(self.singular_values[n]))
+            return -np.einsum("i,i->", sv2, np.log2(sv2)).item()
