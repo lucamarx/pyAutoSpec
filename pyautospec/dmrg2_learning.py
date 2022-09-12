@@ -75,6 +75,8 @@ def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
         mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d))
 
+        mps.singular_values[j-1] = s[0:bond_d]
+
         if cache is not None:
             cache[j] = np.einsum("ip,bp->bi", mps[j], X[:, j, :])
 
@@ -107,6 +109,8 @@ def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
         mps[j-1], mps[j] = u.reshape((bond_d_inp, mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
 
+        mps.singular_values[j-1] = s[0:bond_d]
+
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
 
@@ -136,6 +140,8 @@ def _move_pivot_r2l(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
         u = np.einsum("ij,j->ij", u, s)
 
         mps[j-1], mps[j] = u.reshape((mps.part_d, mps.class_d, bond_d)), v.reshape((bond_d, mps.part_d, bond_d_out))
+
+        mps.singular_values[j-1] = s[0:bond_d]
 
         if cache is not None:
             cache[j] = np.einsum("ipj,bp,bj->bi", mps[j], X[:, j, :], cache[j+1])
@@ -204,6 +210,8 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
         mps[j], mps[j+1] = u.reshape((mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d, bond_d_out))
 
+        mps.singular_values[j] = s[0:bond_d]
+
         if cache is not None:
             cache[j] = np.einsum("bp,pi->bi", X[:, j, :], mps[j])
 
@@ -235,6 +243,8 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
 
         mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d, bond_d_out))
 
+        mps.singular_values[j] = s[0:bond_d]
+
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])
 
@@ -264,6 +274,8 @@ def _move_pivot_l2r(mps, X : np.ndarray, c : np.ndarray, j : int, learn_rate : f
         v = np.einsum("i,ij->ij", s, v)
 
         mps[j], mps[j+1] = u.reshape((bond_d_inp, mps.part_d, bond_d)), v.reshape((bond_d, mps.part_d, mps.class_d))
+
+        mps.singular_values[j] = s[0:bond_d]
 
         if cache is not None:
             cache[j] = np.einsum("bi,bp,ipj->bj", cache[j-1], X[:, j, :], mps[j])

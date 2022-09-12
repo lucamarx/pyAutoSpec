@@ -130,6 +130,9 @@ class Mps2:
         norm = np.sqrt(np.einsum("ipl,ipl->", t, t))
         self[N-1] = t / norm
 
+        # initialize singular values cache
+        self.singular_values = [None] * (N-1)
+
         # initialize training/validation costs
         self.train_costs, self.valid_costs = [], []
 
