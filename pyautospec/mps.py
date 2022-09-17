@@ -403,6 +403,37 @@ class Mps:
             return np.array(paths), np.array(weights)
 
 
+    def path_state_weight(self, path : np.ndarray, X : np.ndarray) -> float:
+        """
+        Evaluate contribution of an mps path when contracting with value x
+        """
+        if path.ndim != 1:
+            raise Exception("path must be a one-dimensional array")
+
+        if path.shape[0] != len(self) - 1:
+            raise Exception("invalid path length, it must be {}".format(len(self) - 1))
+
+        if X.ndim != 2:
+            raise Exception("X must be a two-dimensional array")
+
+        if X.shape != (len(self), self.part_d):
+            raise Exception("invalid X shape, it must be ({},{})".format(len(self), self.part_d))
+
+        # find path-matrices
+        A = [self[0][:,path[0]]]
+
+        for n in range(1, len(path)):
+            A.append(self[n][path[n-1],:,path[n]])
+
+        A.append(self[-1][path[-1],:])
+
+        # contract with x
+        B = [np.einsum("p,p->", A[n], X[n]) for n in range(len(A))]
+
+        # take product
+        return np.prod(B)
+
+
     def entanglement_entropy(self, n : int = None) -> float:
         """
         Compute the entanglement entropy between the first n and the

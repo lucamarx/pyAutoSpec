@@ -3,6 +3,7 @@ Various wfa/mps plots
 """
 import numpy as np
 import jax.numpy as jnp
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 from matplotlib.patches import PathPatch
@@ -128,6 +129,31 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
         ls += ax2.plot(xs, [mps.paths_weights(x, threshold=paths_threshold)[0].shape[0] for x in xs], color="blue", label="paths n.")
 
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
+
+
+def function_mps_path_value_chart(mps):
+    """
+    Plot contributions to the final value by paths and function argument
+    """
+    all_paths, all_xencs = mps._all_paths(), mps._all_encodings()
+
+    W = np.zeros((len(all_paths), len(all_xencs)))
+
+    i = 0
+    for path in all_paths:
+        j = 0
+        for x in all_xencs:
+            W[i,j] = mps.path_state_weight(path, x[0])
+            j += 1
+        i += 1
+
+    W = np.abs(W)
+    W = W / np.max(W)
+
+    plt.figure()
+    plt.title("Path/Value Contributions")
+
+    plt.imshow(W, cmap=cm.magma, origin='lower', aspect="{:2f}".format(len(all_xencs) / len(all_paths)))
 
 
 def mps_entanglement_entropy_chart(mps):

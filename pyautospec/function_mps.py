@@ -7,7 +7,7 @@ import itertools
 from typing import List, Tuple
 
 from .mps import Mps
-from .plots import function_mps_comparison_chart, mps_entanglement_entropy_chart
+from .plots import function_mps_comparison_chart, mps_entanglement_entropy_chart, function_mps_path_value_chart
 
 
 def word2real(s : List[int], x0 : float = 0.0, x1 : float = 1.0) -> float:
@@ -78,6 +78,20 @@ class FunctionMps():
         Encode real value into vector word
         """
         return one_hot(len(self.model), self.model.part_d, [real2word(x, l=len(self.model), x0=self.x0, x1=self.x1)])
+
+
+    def _all_paths(self) -> np.ndarray:
+        """
+        Enumerate all paths in the model
+        """
+        return np.array([np.array(p) for p in itertools.product(*([range(A.shape[0]) for A in self.model[1:]]))])
+
+
+    def _all_encodings(self) -> List[Tuple[np.ndarray, float]]:
+        """
+        Enumerate all possible argument encodings
+        """
+        return [(np.array(w), word2real(list(w), x0=self.x0, x1=self.x1)) for w in itertools.product(*([[0,1]] * len(self.model)))]
 
 
     def __call__(self, x : float) -> float:
@@ -181,3 +195,31 @@ class FunctionMps():
         Enumerate all paths contributing to the final value
         """
         return self.model.paths_weights(self._encode(x)[0,:,:], threshold=threshold)
+
+
+    def path_state_weight(self, path : np.ndarray, X : np.ndarray) -> float:
+        """
+        Evaluate contribution of an mps path when contracting with value X
+        """
+        N = len(self.model)
+
+        if path.ndim != 1:
+            raise Exception("path must be a one-dimensional array")
+
+        if path.shape[0] != N-1:
+            raise Exception("invalid path length, it must be {}".format(N-1))
+
+        if X.ndim != 1:
+            raise Exception("X must be a one-dimensional array of zeros and ones")
+
+        if X.shape[0] != N:
+            raise Exception("invalid X length, it must be {}".format(N))
+
+        return self.model.path_state_weight(path, one_hot(N, self.model.part_d, [X])[0])
+
+
+    def path_value_chart(self):
+        """
+        Plot contributions to the final value by paths and function argument
+        """
+        function_mps_path_value_chart(self)
