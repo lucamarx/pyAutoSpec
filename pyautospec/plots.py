@@ -131,35 +131,35 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
 
 
-def function_mps_path_value_chart(mps, log=False):
+def function_mps_path_value_chart(mps, log : bool = False, threshold : float = None):
     """
     Plot contributions to the final value by paths and function argument
     """
-    all_paths, all_xencs = mps._all_paths(), mps._all_encodings()
-
-    W = np.zeros((len(all_paths), len(all_xencs)))
-
-    i = 0
-    for path in all_paths:
-        j = 0
-        for x in all_xencs:
-            W[i,j] = mps.path_state_weight(path, x[0])
-            j += 1
-        i += 1
+    all_paths, all_xencs, W = mps.path_state_weights()
 
     W = np.abs(W)
 
     if log:
         W = np.log2(W)
 
-    W = W / np.max(W)
+    if threshold is not None:
+        if log:
+            W[W < threshold] = threshold
+        else:
+            W[W < threshold] = 0
 
     plt.figure()
-    plt.title("Path/Value Contributions")
 
-    d = len(all_xencs) // 10
+    if log:
+        plt.title("Path/Value Contributions (log scale)")
+    else:
+        plt.title("Path/Value Contributions")
+
+    d = len(all_xencs) // 8
     plt.xticks(ticks=range(0, len(all_xencs), d), labels=["{:.1f}".format(x[1]) for x in all_xencs[::d]])
-    plt.imshow(W, cmap=cm.magma, origin='lower', aspect="{:2f}".format(len(all_xencs) / len(all_paths)))
+
+    c = plt.imshow(W, cmap=cm.magma, origin='lower', aspect=(len(all_xencs) / len(all_paths)))
+    plt.colorbar(c)
 
 
 def mps_entanglement_entropy_chart(mps):

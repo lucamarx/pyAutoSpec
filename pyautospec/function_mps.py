@@ -218,8 +218,27 @@ class FunctionMps():
         return self.model.path_state_weight(path, one_hot(N, self.model.part_d, [X])[0])
 
 
-    def path_value_chart(self, log=False):
+    def path_state_weights(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Get contributions to the final value by paths and function argument
+        """
+        all_paths, all_xencs = self._all_paths(), self._all_encodings()
+
+        W = np.zeros((len(all_paths), len(all_xencs)))
+
+        i = 0
+        for path in all_paths:
+            j = 0
+            for x in all_xencs:
+                W[i,j] = self.path_state_weight(path, x[0])
+                j += 1
+            i += 1
+
+        return all_paths, all_xencs, W
+
+
+    def path_value_chart(self, log : bool = False, threshold : float = None):
         """
         Plot contributions to the final value by paths and function argument
         """
-        function_mps_path_value_chart(self, log=log)
+        function_mps_path_value_chart(self, log=log, threshold=threshold)
