@@ -7,11 +7,24 @@ import matplotlib.pyplot as plt
 
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
+from functools import reduce
 from typing import List
 
 
 def moving_average(x, w):
     return np.convolve(x, np.ones(w), 'valid') / w
+
+
+def mps_tensor_hist(mps, bins : int = 20):
+    """
+    Plot the distribution of tensor entries
+    """
+    plt.figure()
+    plt.title("MPS Tensor Entries Distribution")
+
+    entries = reduce(lambda x,y: np.concatenate((x,y)), [A.flatten() for A in mps])
+
+    plt.hist(entries, bins=bins)
 
 
 def transition_plot(n_states : int, word_len : int, paths : np.ndarray, weights : np.ndarray, title : str = ""):

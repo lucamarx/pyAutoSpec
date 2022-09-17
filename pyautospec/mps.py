@@ -10,7 +10,7 @@ from jax import jit, vmap
 from typing import List, Tuple
 from functools import reduce
 
-from .plots import training_chart
+from .plots import training_chart, mps_tensor_hist
 from .dmrg_learning import cost, fit_regression
 
 
@@ -357,6 +357,13 @@ class Mps:
             raise Exception("the model has not been trained yet")
 
         training_chart(self.train_costs, self.valid_costs)
+
+
+    def tensor_hist(self, bins : int = 20):
+        """
+        Plot the distribution of tensor entries
+        """
+        mps_tensor_hist(self, bins=bins)
 
 
     def paths_weights(self, X : np.ndarray, threshold : float = None) -> Tuple[np.ndarray, np.ndarray]:
