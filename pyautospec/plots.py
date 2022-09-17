@@ -151,14 +151,17 @@ def function_mps_path_value_chart(mps, log : bool = False, threshold : float = N
     plt.figure()
 
     if log:
-        plt.title("Path/Value Contributions (log scale)")
+        plt.title("Path/Value Absolute Contributions (log scale)")
     else:
-        plt.title("Path/Value Contributions")
+        plt.title("Path/Value Absolute Contributions")
+
+    plt.xlabel("x")
+    plt.ylabel("path index")
 
     d = len(all_xencs) // 8
     plt.xticks(ticks=range(0, len(all_xencs), d), labels=["{:.1f}".format(x[1]) for x in all_xencs[::d]])
 
-    c = plt.imshow(W, cmap=cm.magma, origin='lower', aspect=(len(all_xencs) / len(all_paths)))
+    c = plt.imshow(W, cmap=cm.magma, origin='lower', aspect=(len(all_xencs) / len(all_paths)), interpolation="none")
     plt.colorbar(c)
 
 
