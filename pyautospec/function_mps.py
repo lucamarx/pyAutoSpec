@@ -218,8 +218,8 @@ class FunctionMps():
         return self.model.path_state_weight(path, one_hot(N, self.model.part_d, [X])[0])
 
 
-    def path_value_chart(self):
+    def path_value_chart(self, log=False):
         """
         Plot contributions to the final value by paths and function argument
         """
-        function_mps_path_value_chart(self)
+        function_mps_path_value_chart(self, log=log)

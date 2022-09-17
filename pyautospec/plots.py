@@ -131,7 +131,7 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
 
 
-def function_mps_path_value_chart(mps):
+def function_mps_path_value_chart(mps, log=False):
     """
     Plot contributions to the final value by paths and function argument
     """
@@ -148,11 +148,17 @@ def function_mps_path_value_chart(mps):
         i += 1
 
     W = np.abs(W)
+
+    if log:
+        W = np.log2(W)
+
     W = W / np.max(W)
 
     plt.figure()
     plt.title("Path/Value Contributions")
 
+    d = len(all_xencs) // 10
+    plt.xticks(ticks=range(0, len(all_xencs), d), labels=["{:.1f}".format(x[1]) for x in all_xencs[::d]])
     plt.imshow(W, cmap=cm.magma, origin='lower', aspect="{:2f}".format(len(all_xencs) / len(all_paths)))
 
 
