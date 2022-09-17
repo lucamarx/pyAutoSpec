@@ -8,6 +8,7 @@ import jax.numpy as jnp
 
 from jax import jit, vmap
 from typing import List, Tuple
+from functools import reduce
 
 from .plots import training_chart
 from .dmrg_learning import cost, fit_regression
@@ -158,7 +159,8 @@ class Mps:
 
   particle dim: {:3d}
       bond dim: {:3d} (max: {:d})
-        """.format(self.N, self.part_d, bond_d, self.max_bond_d)
+    sparseness: {:3d}%
+        """.format(self.N, self.part_d, bond_d, self.max_bond_d, int(self.sparseness()*100))
 
 
     def __len__(self) -> int:
@@ -199,6 +201,15 @@ class Mps:
         A list of bond dimensions
         """
         return [self[n].shape[-1] for n in range(len(self)-1)]
+
+
+    def sparseness(self) -> float:
+        """
+        Average tensor sparseness
+        """
+        close2zero = reduce(lambda x,y: np.concatenate((x,y)), [np.isclose(np.abs(A).flatten(), 0) for A in self])
+
+        return len(close2zero[close2zero == True]) / len(close2zero)
 
 
     def __call__(self, X : np.ndarray) -> np.ndarray:
