@@ -131,29 +131,31 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
 
 
-def function_mps_path_value_chart(mps, log : bool = False, threshold : float = None):
+def function_mps_path_value_chart(mps, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None):
     """
     Plot contributions to the final value by paths and function argument
     """
-    all_paths, all_xencs, W = mps.path_state_weights()
+    all_paths, all_xencs, W, err = mps.path_state_weights(sort=sort, error_threshold=error_threshold)
 
-    W = np.abs(W)
+    Z = np.abs(W)
 
     if log:
-        W = np.log2(W)
+        Z = np.log2(Z)
 
     if threshold is not None:
         if log:
-            W[W < threshold] = threshold
+            Z[Z < threshold] = threshold
         else:
-            W[W < threshold] = 0
+            Z[Z < threshold] = 0
 
     plt.figure()
 
     if log:
-        plt.title("Path/Value Absolute Contributions (log scale)")
+        plt.suptitle("Path/Value Absolute Contributions (log scale)")
     else:
-        plt.title("Path/Value Absolute Contributions")
+        plt.suptitle("Path/Value Absolute Contributions")
+
+    plt.title("reconstruction error: {:.4f}".format(err))
 
     plt.xlabel("x")
     plt.ylabel("path index")
@@ -161,8 +163,10 @@ def function_mps_path_value_chart(mps, log : bool = False, threshold : float = N
     d = len(all_xencs) // 8
     plt.xticks(ticks=range(0, len(all_xencs), d), labels=["{:.1f}".format(x[1]) for x in all_xencs[::d]])
 
-    c = plt.imshow(W, cmap=cm.magma, origin='lower', aspect=(len(all_xencs) / len(all_paths)), interpolation="none")
+    c = plt.imshow(Z, cmap=cm.magma, origin='lower', aspect=(len(all_xencs) / len(all_paths)), interpolation="none")
     plt.colorbar(c)
+
+    return all_paths, all_xencs, W, err
 
 
 def mps_entanglement_entropy_chart(mps):

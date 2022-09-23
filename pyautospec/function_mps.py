@@ -218,9 +218,20 @@ class FunctionMps():
         return self.model.path_state_weight(path, one_hot(N, self.model.part_d, [X])[0])
 
 
-    def path_state_weights(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def path_state_weights(self, sort : bool = False, error_threshold : float = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-        Get contributions to the final value by paths and function argument
+        Get contributions to the final value by paths and function argument.
+
+        If SORT is true sort paths by absolute contribution. If ERROR_THRESHOLD
+        keep only the paths that keep the reconstruction error below error
+        threshold.
+
+        Returns:
+
+        - the contributing paths
+        - all the encodings
+        - the weight matrix
+        - the reconstruction error
         """
         all_paths, all_xencs = self._all_paths(), self._all_encodings()
 
@@ -234,11 +245,25 @@ class FunctionMps():
                 j += 1
             i += 1
 
-        return all_paths, all_xencs, W
+        f = np.sum(W, axis=0)
+        if sort or error_threshold is not None:
+            idxs = np.flip(np.argsort(np.max(np.abs(W), axis=1)))
+            all_paths, W = all_paths[idxs], W[idxs,:]
+
+            if error_threshold is not None:
+                for n in reversed(range(W.shape[0])):
+                    if np.average(np.abs(f - np.sum(W[0:n,:], axis=0))) > error_threshold:
+                        break
+
+                all_paths, W = all_paths[0:n,:], W[0:n,:]
+
+        err = np.average(np.abs(f - np.sum(W, axis=0)))
+
+        return all_paths, all_xencs, W, err
 
 
-    def path_value_chart(self, log : bool = False, threshold : float = None):
+    def path_value_chart(self, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None):
         """
         Plot contributions to the final value by paths and function argument
         """
-        function_mps_path_value_chart(self, log=log, threshold=threshold)
+        function_mps_path_value_chart(self, log=log, sort=sort, error_threshold=error_threshold, threshold=threshold)
