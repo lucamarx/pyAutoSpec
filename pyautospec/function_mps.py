@@ -251,11 +251,16 @@ class FunctionMps():
             all_paths, W = all_paths[idxs], W[idxs,:]
 
             if error_threshold is not None:
-                for n in reversed(range(W.shape[0])):
-                    if np.average(np.abs(f - np.sum(W[0:n,:], axis=0))) > error_threshold:
+                i, j = W.shape[0], 0
+                while True:
+                    assert(i > j)
+                    if i-j < 2:
                         break
+                    h = j + (i-j) // 2
+                    e = np.average(np.abs(f - np.sum(W[0:h,:], axis=0)))
+                    i,j = (i,h) if e > error_threshold else (h,j)
 
-                all_paths, W = all_paths[0:n,:], W[0:n,:]
+                all_paths, W = all_paths[0:i,:], W[0:i,:]
 
         err = np.average(np.abs(f - np.sum(W, axis=0)))
 
