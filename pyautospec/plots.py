@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 from functools import reduce
-from typing import List
+from typing import List, Tuple
 
 
 def moving_average(x, w):
@@ -131,7 +131,7 @@ def function_mps_comparison_chart(mps, n_points : int = 50, paths_threshold : fl
     plt.legend(ls, [l.get_label() for l in ls], loc=0)
 
 
-def function_mps_path_value_chart(mps, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None):
+def function_mps_path_value_chart(mps, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
     """
     Plot contributions to the final value by paths and function argument
     """

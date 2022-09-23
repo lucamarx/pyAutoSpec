@@ -267,8 +267,8 @@ class FunctionMps():
         return all_paths, all_xencs, W, err
 
 
-    def path_value_chart(self, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None):
+    def path_value_chart(self, log : bool = False, sort : bool = False, error_threshold : float = None, threshold : float = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, float]:
         """
         Plot contributions to the final value by paths and function argument
         """
-        function_mps_path_value_chart(self, log=log, sort=sort, error_threshold=error_threshold, threshold=threshold)
+        return function_mps_path_value_chart(self, log=log, sort=sort, error_threshold=error_threshold, threshold=threshold)
