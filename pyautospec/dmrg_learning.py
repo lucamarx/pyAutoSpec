@@ -3,7 +3,7 @@ Density Matrix Renormalization Group learning
 """
 import numpy as np
 
-from typing import Tuple
+from typing import List, Tuple
 from tqdm.auto import tqdm
 
 
