@@ -278,7 +278,7 @@ def _move_pivot(mps, X : np.ndarray, y : np.ndarray, n : int, learn_rate : float
     raise Exception("invalid direction: {}".format(direction))
 
 
-def fit_regression(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+def fit_regression(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False, callback = None) -> Tuple[List[float], List[float]]:
     """
     Fit the MPS to the data
 
@@ -312,6 +312,9 @@ def fit_regression(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np
 
     early_stop : bool
     stop as soon as overfitting is detected (needs a validation dataset)
+
+    callback: function(mps, epoch)
+    it is called at each dmrg training epoch
 
     Returns:
     --------
@@ -351,6 +354,9 @@ def fit_regression(mps, X_train : np.ndarray, y_train : np.ndarray, X_valid : np
                 n = _move_pivot(mps, X_batch, y_batch, n, learn_rate, "left2right", cache)
                 if n == mps.N-1:
                     break
+
+        if callback is not None:
+            callback(mps, epoch)
 
         train_cost = cost(mps, X_train, y_train)
         train_costs.append(train_cost[0])

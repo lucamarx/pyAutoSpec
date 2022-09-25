@@ -151,7 +151,7 @@ class FunctionMps():
         mps_entanglement_entropy_chart(self.model)
 
 
-    def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    def fit(self, f, x0 : float = 0.0, x1 : float = 1.0, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, callback = None):
         """
         Fit the model to the function f defined on the interval [x0,x1)
 
@@ -174,6 +174,9 @@ class FunctionMps():
         epochs : int
         the number of epochs
 
+        callback: function(mps, epoch)
+        it is called at each dmrg training epoch
+
         Returns:
         --------
 
@@ -185,7 +188,7 @@ class FunctionMps():
 
         data = [(list(x), f(word2real(list(x), x0=x0, x1=x1))) for x in itertools.product(*([[0,1]] * len(self.model)))]
 
-        self.model.fit(one_hot(len(self.model), self.model.part_d, np.array([t[0] for t in data])), np.array([t[1] for t in data]), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        self.model.fit(one_hot(len(self.model), self.model.part_d, np.array([t[0] for t in data])), np.array([t[1] for t in data]), learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, callback=callback)
 
         return self
 

@@ -273,7 +273,7 @@ class Mps2:
         return cost(self, self.model_type, X, y)
 
 
-    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, callback = None):
         """
         Fit the MPS to the data
 
@@ -304,8 +304,11 @@ class Mps2:
 
         epochs : int
         number of epochs
+
+        callback: function(mps, epoch)
+        it is called at each dmrg training epoch
         """
-        self.train_costs, self.valid_costs = fit(self, self.model_type, X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        self.train_costs, self.valid_costs = fit(self, self.model_type, X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, callback=callback)
 
         return self
 

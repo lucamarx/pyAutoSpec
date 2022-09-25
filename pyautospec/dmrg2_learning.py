@@ -303,7 +303,7 @@ def _validate_dataset(mps, X : np.ndarray, y : np.ndarray, tp : str):
         raise Exception("invalid shape for X_{} (wrong particle dimension)".format(tp))
 
 
-def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10) -> Tuple[List[float], List[float]]:
+def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, callback = None) -> Tuple[List[float], List[float]]:
     """Fit the MPS to the data
 
     0. for each epoch
@@ -339,6 +339,9 @@ def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_val
 
     epochs : int
     number of epochs
+
+    callback: function(mps, epoch)
+    it is called at each dmrg training epoch
 
     Returns:
     --------
@@ -386,6 +389,9 @@ def fit(mps, model_type : str, X_train : np.ndarray, y_train : np.ndarray, X_val
                 n = _move_pivot_l2r(mps, X_batch, y_batch, n, learn_rate, cache)
                 if n == len(mps)-1:
                     break
+
+        if callback is not None:
+            callback(mps, epoch)
 
         train_cost = cost(mps, model_type, X_train, y_train)
         train_costs.append(train_cost)

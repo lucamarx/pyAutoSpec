@@ -104,7 +104,7 @@ class DatasetMps():
         mps_entanglement_entropy_chart(self.model)
 
 
-    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 10, epochs : int = 50, callback = None):
         """
         Fit the model to the data
 
@@ -131,6 +131,9 @@ class DatasetMps():
         early_stop : bool
         stop as soon as overfitting is detected (needs a validation dataset)
 
+        callback: function(mps, epoch)
+        it is called at each dmrg training epoch
+
         Returns:
         --------
 
@@ -147,7 +150,7 @@ class DatasetMps():
         if X_valid is not None and y_valid is not None:
             X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
 
-        self.model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs)
+        self.model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, callback=callback)
 
         return self
 

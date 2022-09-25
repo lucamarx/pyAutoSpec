@@ -309,7 +309,7 @@ class Mps:
         return cost(self, X, y)
 
 
-    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False):
+    def fit(self, X_train : np.ndarray, y_train : np.ndarray, X_valid : np.ndarray = None, y_valid : np.ndarray = None, learn_rate : float = 0.1, batch_size : int = 32, epochs : int = 10, early_stop : bool = False, callback = None):
         """
         Fit the MPS to the data
 
@@ -343,8 +343,11 @@ class Mps:
 
         early_stop : bool
         stop as soon as overfitting is detected (needs a validation dataset)
+
+        callback: function(mps, epoch)
+        it is called at each dmrg training epoch
         """
-        self.train_costs, self.valid_costs = fit_regression(self, X_train, y_train, X_valid, y_valid, learn_rate, batch_size, epochs, early_stop)
+        self.train_costs, self.valid_costs = fit_regression(self, X_train, y_train, X_valid, y_valid, learn_rate, batch_size, epochs, early_stop, callback)
 
         return self
 
