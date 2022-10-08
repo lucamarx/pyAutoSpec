@@ -9,18 +9,6 @@ from .mps2 import Mps2
 from .plots import mps_entanglement_entropy_chart
 
 
-def data2vector(X : np.ndarray, x0 : np.ndarray, x1 : np.ndarray) -> np.ndarray:
-    """
-    Convert data points into 2-dim vectors
-    """
-    theta = (np.pi/2) * (X - x0) / (x1 - x0)
-
-    if np.any(theta < 0) or np.any(theta > np.pi/2):
-        raise Exception("out of range")
-
-    return np.dstack((np.cos(theta), np.sin(theta)))
-
-
 class DatasetMps():
     """
     Mps based classification/regression
@@ -63,6 +51,18 @@ class DatasetMps():
         return "  DatasetMps\n{}".format(self.model.__repr__())
 
 
+    def _encode(self, X : np.ndarray) -> np.ndarray:
+        """
+        Encode data points into 2-dim vectors
+        """
+        theta = (np.pi/2) * (X - self.x0) / (self.x1 - self.x0)
+
+        if np.any(theta < 0) or np.any(theta > np.pi/2):
+            raise Exception("out of range")
+
+        return np.dstack((np.cos(theta), np.sin(theta)))
+
+
     def __call__(self, X : np.ndarray) -> int:
         """
         Evaluate the model at X
@@ -77,7 +77,7 @@ class DatasetMps():
 
         the estimated class/value
         """
-        return self.model.predict(data2vector(X, x0=self.x0, x1=self.x1))
+        return self.model.predict(self._encode(X))
 
 
     def predict(self, X : np.ndarray) -> np.ndarray:
@@ -145,10 +145,10 @@ class DatasetMps():
         if X_train.shape[1] != self.field_n:
             raise Exception("invalid number of fields")
 
-        X_train = data2vector(X_train, x0=self.x0, x1=self.x1)
+        X_train = self._encode(X_train)
 
         if X_valid is not None and y_valid is not None:
-            X_valid = data2vector(X_valid, x0=self.x0, x1=self.x1)
+            X_valid = self._encode(X_valid)
 
         self.model.fit(X_train, y_train, X_valid, y_valid, learn_rate=learn_rate, batch_size=batch_size, epochs=epochs, callback=callback)
 
@@ -182,6 +182,6 @@ class DatasetMps():
         Enumerate all paths contributing to the final value
         """
         if self.model.model_type == "classification":
-            return self.model.paths_weights(data2vector(X, x0=self.x0, x1=self.x1)[0,:], l=self.predict(X)[0], threshold=threshold)
+            return self.model.paths_weights(self._encode(X)[0,:], l=self.predict(X)[0], threshold=threshold)
         else:
-            return self.model.paths_weights(data2vector(X, x0=self.x0, x1=self.x1)[0,:], l=0, threshold=threshold)
+            return self.model.paths_weights(self._encode(X)[0,:], l=0, threshold=threshold)
