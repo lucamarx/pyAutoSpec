@@ -2,8 +2,9 @@
 Mps based classification/regression
 """
 import numpy as np
+import itertools
 
-from typing import Tuple
+from typing import List, Tuple
 
 from .mps2 import Mps2
 from .plots import mps_entanglement_entropy_chart
@@ -61,6 +62,20 @@ class DatasetMps():
             raise Exception("out of range")
 
         return np.dstack((np.cos(theta), np.sin(theta)))
+
+
+    def _all_paths(self) -> np.ndarray:
+        """
+        Enumerate all paths in the model
+        """
+        return np.array([np.array(p) for p in itertools.product(*([range(A.shape[0]) for A in self.model[1:]]))])
+
+
+    def _all_encodings(self, num : int = 3) -> List[Tuple[np.ndarray, float]]:
+        """
+        Enumerate a sample of data points encodings
+        """
+        return [(w, self._encode(w)) for w in itertools.product(*(np.transpose(np.linspace(self.x0, self.x1, num=num))))]
 
 
     def __call__(self, X : np.ndarray) -> int:
