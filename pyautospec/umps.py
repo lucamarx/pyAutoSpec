@@ -7,13 +7,38 @@ import numpy as np
 from typing import List
 
 
+def pseudo_inverse(M : np.ndarray) -> np.ndarray:
+    """Moore-Penrose pseudo inverse
+
+    The pseudo inverse of a matrix M is
+
+    M^†^ = V Σ^†^ U*
+
+    where V,Σ,U are M's SVD factors:
+
+    M = U Σ V*
+
+    see [Moore–Penrose inverse](https://en.wikipedia.org/wiki/Moore–Penrose_inverse)
+
+    """
+    U, S, Vt = np.linalg.svd(M, full_matrices=True, compute_uv=True)
+
+    Sinv = np.zeros((U.shape[1], Vt.shape[0]), dtype=np.float32)
+    diag = np.diag_indices(S.shape[0])
+    Sinv[diag] = 1/S
+    Sinv = np.transpose(Sinv)
+
+    return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
+
+
 class UMPS():
     """
     Uniform Matrix Product State (α, A, ω)
     """
 
     def __init__(self, part_d : int, bond_d : int):
-        """
+        """Create a uMPS
+
         Parameters
         ----------
 
@@ -22,6 +47,7 @@ class UMPS():
 
         `bond_d`: int
         bond dimension
+
         """
         self.part_d = part_d
         self.bond_d = bond_d
@@ -55,6 +81,7 @@ class UMPS():
 
         `w` : float
         the initial weight
+
         """
         self.alpha[p] = w
 
@@ -73,6 +100,7 @@ class UMPS():
 
         `w` : float
         the transition weight
+
         """
         self.A[p, self.alphabet[l], q] = w
 
@@ -102,6 +130,7 @@ class UMPS():
 
         `x`: np.ndarray
         a 2d array with dimensions `(n, part_d)`
+
         """
         if len(x.shape) != 2:
             raise Exception("invalid v-word shape")
@@ -126,6 +155,7 @@ class UMPS():
 
         `x`: List[int]
         a list of particle dimensions
+
         """
         if any([d >= self.part_d for d in x]):
             raise Exception("invalid particle dimension")
@@ -146,6 +176,7 @@ class UMPS():
         ----------
 
         `x`: str
+
         """
         return self.evaluate_list([self.alphabet[c] for c in x])
 
@@ -200,3 +231,58 @@ class UMPS():
                         dot.edge(f"{p}", f"{q}", label=f"{labels[l]}:{self.A[p,l,q]:.2f}")
 
         return dot
+
+
+    def spectral_learning(self, hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : int = None):
+        """Spectral learning algorithm
+
+        Perform spectral learning of Hankel blocks truncating expansion to
+        n_states (if specified)
+
+        Parameters
+        -----------
+
+        `hp`: np.ndarray
+
+        `H`: np.ndarray
+
+        `Hs`: np.ndarray
+
+        `hs`: np.ndarray
+
+        `n_states`: int
+
+        """
+        # compute full-rank factorization H = P·S
+        U, D, V = np.linalg.svd(H, full_matrices=True, compute_uv=True)
+
+        # truncate expansion
+        rank = np.linalg.matrix_rank(H)
+
+        if n_states is not None and n_states < rank:
+            rank = n_states
+
+        U, D, V = U[:,0:rank], D[0:rank], V[0:rank,:]
+        D_sqrt = np.sqrt(D)
+
+        # TODO: is this the place to make uMPS left/right canonical?
+        P = np.einsum("ij,j->ij", U, D_sqrt)
+        S = np.einsum("i,ij->ij", D_sqrt, V)
+
+        # compute pseudo inverses
+        Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
+
+        # α = h·S†
+        self.alpha = np.dot(hs, Sd)
+
+        # A = P†·Hσ·S†
+        self.A = np.einsum("pi,iaj,jq->paq", Pd, Hs, Sd)
+
+        # ω = P†·h
+        self.omega = np.dot(Pd, hp)
+
+        # reset part/bond dimensions, alphabet
+        self.bond_d = self.A.shape[0]
+        self.part_d = self.A.shape[1]
+
+        self.alphabet = {chr(97+i):i for i in range(self.part_d)}
