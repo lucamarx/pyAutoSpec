@@ -5,6 +5,9 @@ import graphviz
 import numpy as np
 
 from typing import List, Tuple, Optional, Callable
+from tqdm.auto import tqdm
+
+from .ps_basis import KBasis
 
 
 def pseudo_inverse(M : np.ndarray) -> np.ndarray:
@@ -41,6 +44,48 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     Sinv = np.transpose(Sinv)
 
     return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
+
+
+def hankel_blocks_for_function(f : Callable[[str], float], basis : KBasis) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Evaluate Hankel blocks for function over a basis
+
+    Parameters
+    ----------
+
+    f : function
+
+    basis : KBasis
+
+    Returns
+    -------
+
+    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+
+    The estimated Hankel blocks for `f` over `basis`
+
+    """
+    p = len(basis.prefixes())
+    a = len(basis.alphabet())
+    s = len(basis.suffixes())
+
+    hp = np.zeros((p,), dtype=np.float32)
+    H  = np.zeros((p,s), dtype=np.float32)
+    Hs = np.zeros((p,a,s), dtype=np.float32)
+    hs = np.zeros((s,), dtype=np.float32)
+
+    # compute Hankel blocks
+    for (u, u_i) in tqdm(basis.prefixes()):
+        hp[u_i] = f(u)
+
+        for (v, v_i) in basis.suffixes():
+            hs[v_i] = f(v)
+
+            H[u_i, v_i] = f(u + v)
+
+            for (a, a_i) in basis.alphabet():
+                Hs[u_i, a_i, v_i] = f(u + a + v)
+
+    return hp, H, Hs, hs
 
 
 class UMPS():
@@ -317,3 +362,29 @@ class UMPS():
         self.part_d = self.A.shape[1]
 
         self.alphabet = {chr(97+i):i for i in range(self.part_d)}
+
+
+    def learn_function(self, f : Callable[[str], float], learn_resolution : int, n_states : Optional[int] = None):
+        """Learn a function
+
+        f: Σ* → R
+
+        Parameters
+        ----------
+
+        f : function
+        The function to be learned, it must be defined over string
+        in the alphabet with float values
+
+        learn_resolution : int
+        The maximum number of letters to use to build Hankel blocks
+
+        n_states : int, optional
+        The maximum number of states in the uMPS
+
+        """
+        basis = KBasis(list(self.alphabet.keys()), learn_resolution)
+
+        hp, H, Hs, hs = hankel_blocks_for_function(f, basis)
+
+        self.spectral_learning(hp, H, Hs, hs, n_states)
