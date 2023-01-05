@@ -4,7 +4,7 @@ Uniform Matrix Product State
 import graphviz
 import numpy as np
 
-from typing import List
+from typing import List, Tuple, Optional, Callable
 
 
 def pseudo_inverse(M : np.ndarray) -> np.ndarray:
@@ -19,6 +19,18 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     M = U Σ V*
 
     see [Moore–Penrose inverse](https://en.wikipedia.org/wiki/Moore–Penrose_inverse)
+
+    Parameters
+    ----------
+
+    M : np.ndarray
+
+    Returns
+    -------
+
+    np.ndarray
+
+    The pseudo inverse
 
     """
     U, S, Vt = np.linalg.svd(M, full_matrices=True, compute_uv=True)
@@ -252,7 +264,7 @@ class UMPS():
         return dot
 
 
-    def spectral_learning(self, hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : int = None):
+    def spectral_learning(self, hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : Optional[int] = None):
         """Spectral learning algorithm
 
         Perform spectral learning of Hankel blocks truncating expansion to
@@ -269,7 +281,7 @@ class UMPS():
 
         hs : np.ndarray
 
-        n_states : int
+        n_states : int, optional
 
         """
         # compute full-rank factorization H = P·S
