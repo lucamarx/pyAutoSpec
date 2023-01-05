@@ -42,11 +42,11 @@ class UMPS():
         Parameters
         ----------
 
-        `part_d`: int
-        particle dimension
+        part_d : int
+        Particle dimension
 
-        `bond_d`: int
-        bond dimension
+        bond_d : int
+        Bond dimension
 
         """
         self.part_d = part_d
@@ -76,11 +76,11 @@ class UMPS():
         Parameters
         ----------
 
-        `p` : int
-        a state
+        p : int
+        The initial state
 
-        `w` : float
-        the initial weight
+        w : float, default=1
+        The initial weight
 
         """
         self.alpha[p] = w
@@ -92,14 +92,17 @@ class UMPS():
         Parameters
         ----------
 
-        `p` : int
-        the start state
+        p : int
+        The transition start state
 
-        `q` : int
-        the end state
+        l : str
+        The transition letter
 
-        `w` : float
-        the transition weight
+        q : int
+        The transition final state
+
+        w : float
+        The transition weight
 
         """
         self.A[p, self.alphabet[l], q] = w
@@ -111,11 +114,11 @@ class UMPS():
         Parameters
         ----------
 
-        `p` : int
-        a state
+        p : int
+        The final state
 
-        `w` : float
-        the final weight
+        w : float
+        The final state weight
         """
         self.omega[p] = w
 
@@ -128,8 +131,15 @@ class UMPS():
         Parameters
         ----------
 
-        `x`: np.ndarray
-        a 2d array with dimensions `(n, part_d)`
+        x: np.ndarray
+        An array with dimensions `(n, part_d)` of vectors each
+        living in the particle space
+
+        Returns
+        -------
+
+        float
+        The value of the uMPS over the input `x`
 
         """
         if len(x.shape) != 2:
@@ -148,13 +158,17 @@ class UMPS():
     def evaluate_list(self, x : List[int]) -> float:
         """Evaluate uMPS on a list of integers
 
-        Each int in the list refers to a particle dimension
-
         Parameters
         ----------
 
-        `x`: List[int]
-        a list of particle dimensions
+        x : List[int]
+        A list where each element refers to a particle dimension
+
+        Returns
+        -------
+
+        float
+        The value of the uMPS over the input `x`
 
         """
         if any([d >= self.part_d for d in x]):
@@ -170,12 +184,17 @@ class UMPS():
     def evaluate_string(self, x : str) -> float:
         """Evaluate uMPS on a string
 
-        Each letter refers to a particle dimension
-
         Parameters
         ----------
 
-        `x`: str
+        x : str
+        A word where each letter refers to a particle dimension
+
+        Returns
+        -------
+
+        float
+        The value of the uMPS over the input `x`
 
         """
         return self.evaluate_list([self.alphabet[c] for c in x])
@@ -197,7 +216,7 @@ class UMPS():
 
 
     def diagram(self, title : str = "uMPS", epsilon : float = 1e-8):
-        """State diagram"""
+        """Draw state diagram"""
 
         labels = list(self.alphabet.keys())
 
@@ -237,20 +256,20 @@ class UMPS():
         """Spectral learning algorithm
 
         Perform spectral learning of Hankel blocks truncating expansion to
-        n_states (if specified)
+        `n_states` (if specified)
 
         Parameters
         -----------
 
-        `hp`: np.ndarray
+        hp : np.ndarray
 
-        `H`: np.ndarray
+        H : np.ndarray
 
-        `Hs`: np.ndarray
+        Hs : np.ndarray
 
-        `hs`: np.ndarray
+        hs : np.ndarray
 
-        `n_states`: int
+        n_states : int
 
         """
         # compute full-rank factorization H = P·S
