@@ -2,12 +2,11 @@
 Uniform Matrix Product State
 """
 import graphviz
+import itertools
 import numpy as np
 
 from typing import List, Tuple, Optional, Callable
 from tqdm.auto import tqdm
-
-from .ps_basis import KBasis
 
 
 def pseudo_inverse(M : np.ndarray) -> np.ndarray:
@@ -46,27 +45,62 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
 
 
-def hankel_blocks_for_function(f : Callable[[str], float], basis : KBasis) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def k_basis(part_d : int, max_word_length : int):
+    """A basis where the prefix/suffix sets are all the words of length less or
+    equal than `max_word_length`
+
+    Parameters
+    ----------
+
+    part_d : int
+    Particle dimension
+
+    max_word_length : int
+    Maximum word length
+
+    Yields
+    ------
+
+    `(w, i)`
+
+    The word and ints index in the basis
+    """
+    alphabet = list(range(part_d))
+
+    yield(([], 0))
+
+    i = 1
+    for l in range(1, max_word_length+1):
+        for w in itertools.product(*([alphabet] * l)):
+            yield((list(w), i))
+            i += 1
+
+
+def hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, max_word_length : int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Evaluate Hankel blocks for function over a basis
 
     Parameters
     ----------
 
     f : function
+    The function we want to learn
 
-    basis : KBasis
+    part_d : int
+    Particle dimension
+
+    max_word_length : int
+    Maximum word length to be included in basis
 
     Returns
     -------
 
-    Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+    `(hp, H, Hs, hs)`
 
-    The estimated Hankel blocks for `f` over `basis`
+    The estimated Hankel blocks for `f` over the basis
 
     """
-    p = len(basis.prefixes())
-    a = len(basis.alphabet())
-    s = len(basis.suffixes())
+    basis = list(k_basis(max_word_length, part_d))
+    p, a, s = len(basis), part_d, len(basis)
 
     hp = np.zeros((p,), dtype=np.float32)
     H  = np.zeros((p,s), dtype=np.float32)
@@ -74,16 +108,16 @@ def hankel_blocks_for_function(f : Callable[[str], float], basis : KBasis) -> Tu
     hs = np.zeros((s,), dtype=np.float32)
 
     # compute Hankel blocks
-    for (u, u_i) in tqdm(basis.prefixes()):
+    for (u, u_i) in tqdm(basis):
         hp[u_i] = f(u)
 
-        for (v, v_i) in basis.suffixes():
+        for (v, v_i) in basis:
             hs[v_i] = f(v)
 
             H[u_i, v_i] = f(u + v)
 
-            for (a, a_i) in basis.alphabet():
-                Hs[u_i, a_i, v_i] = f(u + a + v)
+            for a in range(part_d):
+                Hs[u_i, a, v_i] = f(u + [a] + v)
 
     return hp, H, Hs, hs
 
@@ -364,7 +398,7 @@ class UMPS():
         self.alphabet = {chr(97+i):i for i in range(self.part_d)}
 
 
-    def learn_function(self, f : Callable[[str], float], learn_resolution : int, n_states : Optional[int] = None):
+    def learn_function(self, f : Callable[[List[int]], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a function
 
         f: Σ* → R
@@ -373,7 +407,7 @@ class UMPS():
         ----------
 
         f : function
-        The function to be learned, it must be defined over string
+        The function to be learned, it must be defined over list
         in the alphabet with float values
 
         learn_resolution : int
@@ -383,8 +417,6 @@ class UMPS():
         The maximum number of states in the uMPS
 
         """
-        basis = KBasis(list(self.alphabet.keys()), learn_resolution)
-
-        hp, H, Hs, hs = hankel_blocks_for_function(f, basis)
+        hp, H, Hs, hs = hankel_blocks_for_function(f, self.part_d, learn_resolution)
 
         self.spectral_learning(hp, H, Hs, hs, n_states)
