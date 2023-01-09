@@ -156,14 +156,14 @@ class UMPS():
 
 
     def __repr__(self) -> str:
-        return """
-  ╭───┐       ╭───┐       ╭───┐
-  │ α ├─ ... ─┤ A ├─ ... ─┤ ω │
-  └───┘       └─┬─┘       └───┘
+        return f"""
+  ╭───┐     ╭───┐     ╭───┐
+  │ α ├─...─┤ A ├─...─┤ ω │
+  └───┘     └─┬─┘     └───┘
 
-  particle dim: {:3d}
-      bond dim: {:3d}
-        """.format(self.part_d, self.bond_d)
+  particle dim: {self.part_d:3d}
+      bond dim: {self.bond_d:3d}
+        """
 
 
     def set_starting_state(self, p : int, w : float = 1.0):
