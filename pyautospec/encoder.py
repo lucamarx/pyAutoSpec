@@ -1,7 +1,7 @@
 """
 Multi-dimensional vector-word encoder
 """
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 
 def _scalar2word(x : float, l : int, limits : Tuple[float, float]) -> List[int]:
@@ -36,7 +36,7 @@ def _digit2binary(d : int, dim : int) -> Tuple:
 class VectorEncoder():
     """Multi-dimensional vector-word encoder"""
 
-    def __init__(self, limits : List[Tuple[float, float]]):
+    def __init__(self, limits : List[Tuple[float, float]], encoding_length : Optional[int] = 8):
         """Create a vector encoder
 
         `(x, y, ...) → w`
@@ -50,16 +50,21 @@ class VectorEncoder():
         limits : List[Tuple[float,float]]
         The limits of each vector dimension
 
+        encoding_length : int, optional
+        The length of the encoded word
+
         """
         self.dim = len(limits)
         self.limits = limits
+        self.part_d = 2**self.dim
+        self.encoding_length = encoding_length
 
 
     def __repr__(self):
-        return f"{self.dim}-dimensional VectorDecoder"
+        return f"{self.dim}-dimensional encoder"
 
 
-    def encode(self, *args, length : int = 8) -> List[int]:
+    def encode(self, *args) -> List[int]:
         """Encode a vector into an l-word
 
         Parameters
@@ -77,7 +82,7 @@ class VectorEncoder():
         The encoded l-word
 
         """
-        return list(map(_binary2digit, zip(*[_scalar2word(args[d], l=length, limits=self.limits[d]) for d in range(self.dim)])))
+        return list(map(_binary2digit, zip(*[_scalar2word(args[d], l=self.encoding_length, limits=self.limits[d]) for d in range(self.dim)])))
 
 
     def decode(self, word : List[int]) -> Tuple:
@@ -97,5 +102,8 @@ class VectorEncoder():
         A tuple of the vector components
 
         """
+        if len(word) == 0:
+            return tuple([x0 for (x0,_) in self.limits])
+
         comps = list(map(list, zip(*[_digit2binary(d, dim=self.dim) for d in word])))
-        tuple([_word2scalar(comps[d], self.limits[d]) for d in range(self.dim)])
+        return tuple([_word2scalar(comps[d], self.limits[d]) for d in range(self.dim)])
