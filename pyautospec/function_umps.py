@@ -12,7 +12,7 @@ class FunctionUMps():
     UMps based multi-dimensional function
     """
 
-    def __init__(self, limits : List[Tuple[float, float]], encoding_length : Optional[int] = 8, max_bond_dim : Optional[int] = 20):
+    def __init__(self, limits : List[Tuple[float, float]], encoding_length : Optional[int] = 12, max_bond_dim : Optional[int] = 20):
         """Create a multi dimensional real function
 
         Paramaters
