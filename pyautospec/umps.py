@@ -147,6 +147,8 @@ class UMPS():
         self.A = np.zeros((bond_d, part_d, bond_d), dtype=np.float32)
         self.omega = np.zeros((bond_d,), dtype=np.float32)
 
+        self.singular_values = None
+
         if alphabet is None:
             self.alphabet = {chr(97+i):i for i in range(part_d)}
         else:
@@ -409,7 +411,8 @@ class UMPS():
         self.bond_d = self.A.shape[0]
         self.part_d = self.A.shape[1]
 
-        self.alphabet = {chr(97+i):i for i in range(self.part_d)}
+        # save singular values
+        self.singular_values = D
 
 
     def learn_function(self, f : Callable[[List[int]], float], learn_resolution : int, n_states : Optional[int] = None):
