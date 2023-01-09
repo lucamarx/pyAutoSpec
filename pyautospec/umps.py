@@ -45,7 +45,7 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
 
 
-def k_basis(part_d : int, max_word_length : int):
+def _k_basis(part_d : int, max_word_length : int):
     """A basis where the prefix/suffix sets are all the words of length less or
     equal than `max_word_length`
 
@@ -76,7 +76,7 @@ def k_basis(part_d : int, max_word_length : int):
             i += 1
 
 
-def hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, max_word_length : int) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def _hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, max_word_length : int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Evaluate Hankel blocks for function over a basis
 
     Parameters
@@ -94,32 +94,29 @@ def hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, m
     Returns
     -------
 
-    `(hp, H, Hs, hs)`
+    `(h, H, Hs)`
 
     The estimated Hankel blocks for `f` over the basis
 
     """
-    basis = list(k_basis(max_word_length, part_d))
-    p, a, s = len(basis), part_d, len(basis)
+    basis = list(_k_basis(max_word_length, part_d))
+    ps, a = len(basis), part_d
 
-    hp = np.zeros((p,), dtype=np.float32)
-    H  = np.zeros((p,s), dtype=np.float32)
-    Hs = np.zeros((p,a,s), dtype=np.float32)
-    hs = np.zeros((s,), dtype=np.float32)
+    h = np.zeros((ps,), dtype=np.float32)
+    H  = np.zeros((ps,ps), dtype=np.float32)
+    Hs = np.zeros((ps,a,ps), dtype=np.float32)
 
     # compute Hankel blocks
     for (u, u_i) in tqdm(basis):
-        hp[u_i] = f(u)
+        h[u_i] = f(u)
 
         for (v, v_i) in basis:
-            hs[v_i] = f(v)
-
             H[u_i, v_i] = f(u + v)
 
             for a in range(part_d):
                 Hs[u_i, a, v_i] = f(u + [a] + v)
 
-    return hp, H, Hs, hs
+    return h, H, Hs
 
 
 class UMPS():
@@ -291,7 +288,7 @@ class UMPS():
         The value of the uMPS over the input `x`
 
         """
-        return self.evaluate_list([self.alphabet[c] for c in x])
+        return self.evaluate_lword([self.alphabet[c] for c in x])
 
 
     def __call__(self, x) -> float:
@@ -357,7 +354,7 @@ class UMPS():
         return dot
 
 
-    def spectral_learning(self, hp : np.ndarray, H : np.ndarray, Hs : np.ndarray, hs : np.ndarray, n_states : Optional[int] = None):
+    def spectral_learning(self, h : np.ndarray, H : np.ndarray, Hs : np.ndarray, n_states : Optional[int] = None):
         """Spectral learning algorithm
 
         Perform spectral learning of Hankel blocks truncating expansion to
@@ -366,13 +363,11 @@ class UMPS():
         Parameters
         -----------
 
-        hp : np.ndarray
+        h : np.ndarray
 
         H : np.ndarray
 
         Hs : np.ndarray
-
-        hs : np.ndarray
 
         n_states : int, optional
 
@@ -397,13 +392,13 @@ class UMPS():
         Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
 
         # α = h·S†
-        self.alpha = np.dot(hs, Sd)
+        self.alpha = np.dot(h, Sd)
 
         # A = P†·Hσ·S†
         self.A = np.einsum("pi,iaj,jq->paq", Pd, Hs, Sd)
 
         # ω = P†·h
-        self.omega = np.dot(Pd, hp)
+        self.omega = np.dot(Pd, h)
 
         # reset part/bond dimensions, alphabet
         self.bond_d = self.A.shape[0]
@@ -431,6 +426,4 @@ class UMPS():
         The maximum number of states in the uMPS
 
         """
-        hp, H, Hs, hs = hankel_blocks_for_function(f, self.part_d, learn_resolution)
-
-        self.spectral_learning(hp, H, Hs, hs, n_states)
+        self.spectral_learning(*_hankel_blocks_for_function(f, self.part_d, learn_resolution), n_states)
