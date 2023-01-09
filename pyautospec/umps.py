@@ -53,7 +53,7 @@ def k_basis(part_d : int, max_word_length : int):
     ----------
 
     part_d : int
-    Particle dimension
+    Particle dimension (or alphabet size)
 
     max_word_length : int
     Maximum word length
@@ -63,7 +63,7 @@ def k_basis(part_d : int, max_word_length : int):
 
     `(w, i)`
 
-    The word and ints index in the basis
+    The word (as a list of particle dimensions) and ints index in the basis
     """
     alphabet = list(range(part_d))
 
@@ -123,8 +123,11 @@ def hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, m
 
 
 class UMPS():
-    """
-    Uniform Matrix Product State (α, A, ω)
+    """Uniform Matrix Product State (α, A, ω)
+
+    Here we we consider the particle dimensions and the alphabet as the same
+    thing
+
     """
 
     def __init__(self, part_d : int, bond_d : int):
@@ -134,7 +137,7 @@ class UMPS():
         ----------
 
         part_d : int
-        Particle dimension
+        Particle dimension (or equivalently alphabet size)
 
         bond_d : int
         Bond dimension
@@ -215,7 +218,7 @@ class UMPS():
 
 
     def evaluate_vword(self, x : np.ndarray) -> float:
-        """Evaluate uMPS on a vector word
+        """Evaluate uMPS on a v-word (vector word)
 
         Each vector belongs to the particle space
 
@@ -246,8 +249,8 @@ class UMPS():
         return np.dot(T, self.omega)
 
 
-    def evaluate_list(self, x : List[int]) -> float:
-        """Evaluate uMPS on a list of integers
+    def evaluate_lword(self, x : List[int]) -> float:
+        """Evaluate uMPS on a l-word (list of particle dimension)
 
         Parameters
         ----------
@@ -272,8 +275,8 @@ class UMPS():
         return np.dot(T, self.omega)
 
 
-    def evaluate_string(self, x : str) -> float:
-        """Evaluate uMPS on a string
+    def evaluate_word(self, x : str) -> float:
+        """Evaluate uMPS on a word
 
         Parameters
         ----------
@@ -298,16 +301,27 @@ class UMPS():
             return self.evaluate_vword(x)
 
         if isinstance(x, list):
-            return self.evaluate_list(x)
+            return self.evaluate_lword(x)
 
         if isinstance(x, str):
-            return self.evaluate_string(x)
+            return self.evaluate_word(x)
 
         raise Exception("invalid type")
 
 
-    def diagram(self, title : str = "uMPS", epsilon : float = 1e-8):
-        """Draw state diagram"""
+    def diagram(self, title : Optional[str] = "uMPS", epsilon : Optional[float] = 1e-8):
+        """Draw state diagram
+
+        Parameters
+        ----------
+
+        title : str
+        The title
+
+        epsilon : float, optional
+        Do not draw transitions with weights less than `epsilon`
+
+        """
 
         labels = list(self.alphabet.keys())
 
