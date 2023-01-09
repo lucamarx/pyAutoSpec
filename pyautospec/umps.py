@@ -127,7 +127,7 @@ class UMPS():
 
     """
 
-    def __init__(self, part_d : int, bond_d : int):
+    def __init__(self, part_d : int, bond_d : int, alphabet : Optional[List[str]] = None):
         """Create a uMPS
 
         Parameters
@@ -147,7 +147,12 @@ class UMPS():
         self.A = np.zeros((bond_d, part_d, bond_d), dtype=np.float32)
         self.omega = np.zeros((bond_d,), dtype=np.float32)
 
-        self.alphabet = {chr(97+i):i for i in range(part_d)}
+        if alphabet is None:
+            self.alphabet = {chr(97+i):i for i in range(part_d)}
+        else:
+            if len(alphabet) != part_d:
+                raise Exception("there should be one letter for each particle dimension")
+            self.alphabet = {alphabet[i]:i for i in range(len(alphabet))}
 
 
     def __repr__(self) -> str:
