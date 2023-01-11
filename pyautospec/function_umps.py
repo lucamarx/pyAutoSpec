@@ -1,6 +1,8 @@
 """
 UMps based multi-dimensional functions
 """
+from __future__ import annotations
+
 from typing import List, Tuple, Optional, Callable
 
 from .umps import UMPS
@@ -32,6 +34,25 @@ class FunctionUMps():
   {" x ".join([f"[{x0:.2f},{x1:.2f})" for (x0, x1) in self.encoder.limits])} → R
   {self.umps.__repr__()}
         """
+
+
+    def scalar(self, other : FunctionUMps, length : int) -> float:
+        """Scalar product between the underlying uMPSs
+
+        Paramaters
+        ----------
+
+        other : FunctionUMps
+        Another function defined on the same domain
+
+        length : int
+        Number of As to include
+
+        """
+        if self.encoder.limits != other.encoder.limits:
+            raise Exception("the two functions must be defined on the same domain")
+
+        return self.umps.scalar(other.umps, length)
 
 
     def __call__(self, *args) -> float:

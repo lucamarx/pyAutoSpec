@@ -1,6 +1,8 @@
 """
 Uniform Matrix Product State
 """
+from __future__ import annotations
+
 import graphviz
 import itertools
 import numpy as np
@@ -237,6 +239,39 @@ class UMPS():
             return self.evaluate_word(x)
 
         raise Exception("invalid type")
+
+
+    def scalar(self, other : UMPS, length : int) -> float:
+        """Compute scalar product between two uMPSs
+
+        `    ╭───┐     ╭───┐
+        ` α ─┤ A ├─...─┤ A ├─ ω
+        `    └─┬─┘     └─┬─┘
+        `    ╭─┴─┐     ╭─┴─┐
+        ` α'─┤ A'├─...─┤ A'├─ ω'
+        `    └───┘     └───┘
+
+        Parameters
+        ----------
+
+        other : UMPS
+        Another uMPS
+
+        length : int
+        Number of tensors to include
+
+        """
+        if length < 1:
+            raise Exception("length must be at least 1")
+
+        if self.part_d != other.part_d:
+            raise Exception("the two uMPSs must have the same particle dimension")
+
+        T = np.einsum("ipk,jpl->ijkl", self.A, other.A)
+        S = np.einsum("i,j,ijkl->kl", self.alpha, other.alpha, T)
+        for _ in range(length-1):
+            S = np.einsum("ij,ijkl->kl", S, T)
+        return np.einsum("ij,i,j", S, self.omega, other.omega)
 
 
     def diagram(self, title : Optional[str] = "uMPS", epsilon : Optional[float] = 1e-8):
