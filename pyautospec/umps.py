@@ -45,80 +45,6 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
 
 
-def _k_basis(part_d : int, max_word_length : int):
-    """A basis where the prefix/suffix sets are all the words of length less or
-    equal than `max_word_length`
-
-    Parameters
-    ----------
-
-    part_d : int
-    Particle dimension (or alphabet size)
-
-    max_word_length : int
-    Maximum word length
-
-    Yields
-    ------
-
-    `(w, i)`
-
-    The word (as a list of particle dimensions) and ints index in the basis
-    """
-    alphabet = list(range(part_d))
-
-    yield(([], 0))
-
-    i = 1
-    for l in range(1, max_word_length+1):
-        for w in itertools.product(*([alphabet] * l)):
-            yield((list(w), i))
-            i += 1
-
-
-def _hankel_blocks_for_function(f : Callable[[List[int]], float], part_d : int, max_word_length : int) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Evaluate Hankel blocks for function over a basis
-
-    Parameters
-    ----------
-
-    f : function
-    The function we want to learn
-
-    part_d : int
-    Particle dimension
-
-    max_word_length : int
-    Maximum word length to be included in basis
-
-    Returns
-    -------
-
-    `(h, H, Hs)`
-
-    The estimated Hankel blocks for `f` over the basis
-
-    """
-    basis = list(_k_basis(max_word_length, part_d))
-    ps, a = len(basis), part_d
-
-    h = np.zeros((ps,), dtype=np.float32)
-    H  = np.zeros((ps,ps), dtype=np.float32)
-    Hs = np.zeros((ps,a,ps), dtype=np.float32)
-
-    # compute Hankel blocks
-    for (u, u_i) in tqdm(basis):
-        h[u_i] = f(u)
-
-        for (v, v_i) in basis:
-            H[u_i, v_i] = f(u + v)
-
-            for a in range(part_d):
-                Hs[u_i, a, v_i] = f(u + [a] + v)
-
-    return h, H, Hs
-
-
 class UMPS():
     """Uniform Matrix Product State (α, A, ω)
 
@@ -361,7 +287,74 @@ class UMPS():
         return dot
 
 
-    def spectral_learning(self, h : np.ndarray, H : np.ndarray, Hs : np.ndarray, n_states : Optional[int] = None):
+    def _k_basis(self, max_word_length : int):
+        """A basis where the prefix/suffix sets are all the words of length less or
+        equal than `max_word_length`
+
+        Parameters
+        ----------
+
+        max_word_length : int
+        Maximum word length
+
+        Yields
+        ------
+
+        `(w, i)`
+
+        The word (as a list of particle dimensions) and ints index in the basis
+        """
+        alphabet = list(range(self.part_d))
+
+        yield(([], 0))
+
+        i = 1
+        for l in range(1, max_word_length+1):
+            for w in itertools.product(*([alphabet] * l)):
+                yield((list(w), i))
+                i += 1
+
+
+    def _hankel_blocks_for_function(self, f : Callable[[List[int]], float], basis : List[Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Evaluate Hankel blocks for function over a basis
+
+        Parameters
+        ----------
+
+        f : function
+        The function we want to learn
+
+        max_word_length : int
+        Maximum word length to be included in basis
+
+        Returns
+        -------
+
+        `(h, H, Hs)`
+
+        The estimated Hankel blocks for `f` over the basis
+
+        """
+        ps, a = len(basis), self.part_d
+
+        h = np.zeros((ps,), dtype=np.float32)
+        H  = np.zeros((ps,ps), dtype=np.float32)
+        Hs = np.zeros((ps,a,ps), dtype=np.float32)
+
+        # compute Hankel blocks
+        for (u, u_i) in tqdm(basis):
+            h[u_i] = f(u)
+
+            for (v, v_i) in basis:
+                H[u_i, v_i] = f(u + v)
+
+                for a in range(self.part_d):
+                    Hs[u_i, a, v_i] = f(u + [a] + v)
+
+        return h, H, Hs
+
+
+    def _spectral_learning(self, h : np.ndarray, H : np.ndarray, Hs : np.ndarray, n_states : Optional[int] = None):
         """Spectral learning algorithm
 
         Perform spectral learning of Hankel blocks truncating expansion to
@@ -415,7 +408,7 @@ class UMPS():
         self.singular_values = D
 
 
-    def learn_function(self, f : Callable[[List[int]], float], learn_resolution : int, n_states : Optional[int] = None):
+    def fit(self, f : Callable[[List[int]], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a function
 
         f: Σ* → R
@@ -434,4 +427,5 @@ class UMPS():
         The maximum number of states in the uMPS
 
         """
-        self.spectral_learning(*_hankel_blocks_for_function(f, self.part_d, learn_resolution), n_states)
+        basis = list(self._k_basis(learn_resolution))
+        self._spectral_learning(*self._hankel_blocks_for_function(f, basis), n_states)
