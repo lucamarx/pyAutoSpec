@@ -271,7 +271,7 @@ class UMPS():
         S = np.einsum("i,j,ijkl->kl", self.alpha, other.alpha, T)
         for _ in range(length-1):
             S = np.einsum("ij,ijkl->kl", S, T)
-        return np.einsum("ij,i,j", S, self.omega, other.omega)
+        return np.einsum("ij,i,j", S, self.omega, other.omega) / self.part_d**length
 
 
     def diagram(self, title : Optional[str] = "uMPS", epsilon : Optional[float] = 1e-8):
@@ -350,7 +350,7 @@ class UMPS():
                 i += 1
 
 
-    def _hankel_blocks_for_function(self, f : Callable[[List[int]], float], basis : List[Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _hankel_blocks(self, f : Callable[[List[int]], float], basis : List[Tuple[int, int]]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Evaluate Hankel blocks for function over a basis
 
         Parameters
@@ -463,4 +463,4 @@ class UMPS():
 
         """
         basis = list(self._k_basis(learn_resolution))
-        self._spectral_learning(*self._hankel_blocks_for_function(f, basis), n_states)
+        self._spectral_learning(*self._hankel_blocks(f, basis), n_states)
