@@ -39,7 +39,7 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
-    def learn(self, f : Callable[[Tuple], float], learn_resolution : int):
+    def fit(self, f : Callable[[Tuple], float], learn_resolution : int):
         """Learn a function
 
         """
