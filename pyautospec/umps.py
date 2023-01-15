@@ -464,3 +464,35 @@ class UMPS():
         """
         basis = list(self._k_basis(learn_resolution))
         self._spectral_learning(*self._hankel_blocks(f, basis), n_states)
+
+
+    def integral(self, length : int) -> Tuple[float, np.ndarray]:
+        """Sum over all the words of fixed length
+
+        `    ╭───┐     ╭───┐
+        ` α ─┤ A ├─...─┤ A ├─ ω
+        `    └─┬─┘     └─┬─┘
+        `      1         1
+
+        Parameters
+        ----------
+
+        length : int
+        Include only words of fixed length
+
+        Returns
+        -------
+
+        `(i, I)`
+
+        The uMPS "integral" and the partially evaluated chain
+
+        """
+        if length < 1:
+            raise Exception("length must be at least 1")
+
+        I, C = self.alpha, np.ones(self.part_d)
+        for _ in range(length):
+            I = np.einsum("i,p,ipj->j", I, C, self.A)
+
+        return np.dot(I, self.omega), I

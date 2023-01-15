@@ -3,6 +3,8 @@ UMps based multi-dimensional functions
 """
 from __future__ import annotations
 
+import numpy as np
+
 from typing import List, Tuple, Optional, Callable
 
 from .umps import UMPS
@@ -66,3 +68,21 @@ class FunctionUMps():
         """
         self.f = f
         self.umps.fit(lambda x: f(*self.encoder.decode(x)), learn_resolution)
+
+
+    def integral(self) -> float:
+        """Integral over whole domain
+
+        """
+        if len(self.encoder.limits) != 1:
+            # TODO: evaluate over n-dim functions
+            raise Exception("integrals can be evaluated for one dim functions only")
+
+        dx = self.encoder.resolution()[0]
+
+        _, I = self.umps.integral(self.encoder.encoding_length)
+
+        i0 = np.einsum("i,p,ipj,j", I, np.array([1,0]), self.umps.A, self.umps.omega)
+        i1 = np.einsum("i,p,ipj,j", I, np.array([0,1]), self.umps.A, self.umps.omega)
+
+        return dx*(i1+i0)/2

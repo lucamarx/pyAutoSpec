@@ -112,4 +112,4 @@ class VectorEncoder():
     def resolution(self) -> float:
         """The encoding resolution
         """
-        return [2**(-self.encoding_length-1) * (x1 - x0) for x0,x1 in self.limits]
+        return [2**(-self.encoding_length) * (x1-x0) for x0,x1 in self.limits]
