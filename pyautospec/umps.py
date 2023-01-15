@@ -492,7 +492,7 @@ class UMPS():
             raise Exception("length must be at least 1")
 
         I, T = self.alpha, np.einsum("p,ipj->ij", np.ones(self.part_d), self.A)
-        for n in range(length):
+        for _ in range(length):
             I = np.einsum("i,ij->j", I, T)
 
         return np.dot(I, self.omega), I

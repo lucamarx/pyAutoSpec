@@ -62,12 +62,12 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
-    def fit(self, f : Callable[[Tuple], float], learn_resolution : int):
+    def fit(self, f : Callable[[Tuple], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a function
 
         """
         self.f = f
-        self.umps.fit(lambda x: f(*self.encoder.decode(x)), learn_resolution)
+        self.umps.fit(lambda x: f(*self.encoder.decode(x)), learn_resolution, n_states)
 
 
     def integral(self) -> float:
