@@ -389,7 +389,7 @@ class UMPS():
         return h, H, Hs
 
 
-    def _spectral_learning(self, h : np.ndarray, H : np.ndarray, Hs : np.ndarray, n_states : Optional[int] = None):
+    def _spectral_learning(self, hp : np.ndarray, hs : np.ndarray, H : np.ndarray, Hs : np.ndarray, n_states : Optional[int] = None):
         """Spectral learning algorithm
 
         Perform spectral learning of Hankel blocks truncating expansion to
@@ -398,7 +398,9 @@ class UMPS():
         Parameters
         -----------
 
-        h : np.ndarray
+        hp : np.ndarray
+
+        hs : np.ndarray
 
         H : np.ndarray
 
@@ -427,13 +429,13 @@ class UMPS():
         Pd, Sd = pseudo_inverse(P), pseudo_inverse(S)
 
         # α = h·S†
-        self.alpha = np.dot(h, Sd)
+        self.alpha = np.dot(hs, Sd)
 
         # A = P†·Hσ·S†
         self.A = np.einsum("pi,iaj,jq->paq", Pd, Hs, Sd)
 
         # ω = P†·h
-        self.omega = np.dot(Pd, h)
+        self.omega = np.dot(Pd, hp)
 
         # reset part/bond dimensions, alphabet
         self.bond_d = self.A.shape[0]
@@ -463,7 +465,8 @@ class UMPS():
 
         """
         basis = list(self._k_basis(learn_resolution))
-        self._spectral_learning(*self._hankel_blocks(f, basis), n_states)
+        h, H, Hs = self._hankel_blocks(f, basis)
+        self._spectral_learning(h, h, H, Hs, n_states)
 
 
     def integral(self, length : int) -> Tuple[float, np.ndarray]:
