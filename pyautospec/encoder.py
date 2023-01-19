@@ -1,6 +1,8 @@
 """
 Multi-dimensional vector-word encoder
 """
+import numpy as np
+
 from typing import List, Tuple, Optional
 
 
@@ -113,3 +115,59 @@ class VectorEncoder():
         """The encoding resolution
         """
         return [2**(-self.encoding_length) * (x1-x0) for x0,x1 in self.limits]
+
+
+    def encode_array(self, X : np.ndarray) -> np.ndarray:
+        """Encode a vector or a batch of vectors into a v-word or a batch of
+        v-words
+
+        Parameters
+        ----------
+
+        X : np.ndarray
+        A vector or a batch of vectors
+
+        Returns
+        -------
+
+        A v-word or a batch of v-words
+
+        """
+        if len(X.shape) not in [1,2]:
+            raise Exception("invalid X shape: must be a vector or a batch of vectors")
+
+        if len(X.shape) == 1:
+            X = X.reshape((1,-1))
+
+        if X.shape[1] != len(self.limits):
+            raise Exception(f"invalid shape: vectors must be {len(self.limits)}-dimensional")
+
+        return np.array([self.encode(*x) for x in X])
+
+
+    def decode_array(self, W : np.ndarray) -> np.ndarray:
+        """Decode a v-word or a batch of v-words into a vactor or a batch of
+        vectors
+
+        Parameters
+        ----------
+
+        W : np.ndarray
+        A v-word or a batch ov v-words
+
+        Returns
+        -------
+
+        A vector or a batch of vectors
+
+        """
+        if len(W.shape) not in [1,2]:
+            raise Exception("invalid W shape: must be a v-vector or a batch of v-vectors")
+
+        if len(W.shape) == 1:
+            W = W.reshape((1,-1))
+
+        if W.shape[1] != self.encoding_length:
+            raise Exception(f"invalid shape: v-vectors must be {self.encoding_length} long")
+
+        return np.array([self.decode(w) for w in W])
