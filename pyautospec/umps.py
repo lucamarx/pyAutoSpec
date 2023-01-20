@@ -68,8 +68,6 @@ class UMPS():
         Bond dimension
 
         """
-        self.part_d = part_d
-        self.bond_d = bond_d
 
         self.alpha = np.zeros((bond_d,), dtype=np.float32)
         self.A = np.zeros((bond_d, part_d, bond_d), dtype=np.float32)
@@ -83,6 +81,16 @@ class UMPS():
             if len(alphabet) != part_d:
                 raise Exception("there should be one letter for each particle dimension")
             self.alphabet = {alphabet[i]:i for i in range(len(alphabet))}
+
+
+    @property
+    def part_d(self) -> int:
+        return self.A.shape[1]
+
+
+    @property
+    def bond_d(self) -> int:
+        return self.A.shape[0]
 
 
     def __repr__(self) -> str:
@@ -436,10 +444,6 @@ class UMPS():
 
         # ω = P†·h
         self.omega = np.dot(Pd, hp)
-
-        # reset part/bond dimensions, alphabet
-        self.bond_d = self.A.shape[0]
-        self.part_d = self.A.shape[1]
 
         # save singular values
         self.singular_values = D
