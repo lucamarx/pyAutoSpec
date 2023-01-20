@@ -38,7 +38,7 @@ class FunctionUMps():
         """
 
 
-    def scalar(self, other : FunctionUMps, length : int) -> float:
+    def scalar(self, other : FunctionUMps) -> float:
         """Scalar product between the underlying uMPSs
 
         Paramaters
@@ -47,14 +47,13 @@ class FunctionUMps():
         other : FunctionUMps
         Another function defined on the same domain
 
-        length : int
-        Number of As to include
-
         """
         if self.encoder.limits != other.encoder.limits:
             raise Exception("the two functions must be defined on the same domain")
 
-        return self.umps.scalar(other.umps, length)
+        dx = self.encoder.resolution()[0]
+
+        return dx*self.umps.scalar(other.umps, self.encoder.encoding_length)
 
 
     def __call__(self, *args) -> float:

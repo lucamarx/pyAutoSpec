@@ -268,10 +268,10 @@ class UMPS():
             raise Exception("the two uMPSs must have the same particle dimension")
 
         T = np.einsum("ipk,jpl->ijkl", self.A, other.A)
-        S = np.einsum("i,j,ijkl->kl", self.alpha, other.alpha, T)
-        for _ in range(length-1):
+        S = np.einsum("i,j->ij", self.alpha, other.alpha)
+        for _ in range(length):
             S = np.einsum("ij,ijkl->kl", S, T)
-        return np.einsum("ij,i,j", S, self.omega, other.omega) / self.part_d**length
+        return np.einsum("ij,i,j", S, self.omega, other.omega)
 
 
     def diagram(self, title : Optional[str] = "uMPS", epsilon : Optional[float] = 1e-8):
