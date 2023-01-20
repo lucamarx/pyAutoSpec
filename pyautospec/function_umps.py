@@ -107,3 +107,36 @@ class FunctionUMps():
         i1 = np.einsum("i,p,ipj,j", I, np.array([0,1]), self.umps.A, self.umps.omega)
 
         return dx*(i1+i0)/2
+
+
+    def gradient(self, d : Optional[int] = 0) -> FunctionUMps:
+        """Compute gradient along dimension
+
+        Parameters
+        ----------
+
+        d : int, optional
+        The dimension to take the gradient along
+
+        Returns
+        -------
+
+        `∂_d self`
+
+        An uMps computing the gradient
+
+        """
+        if d < 0 or d > self.encoder.part_d:
+            raise Exception("invalid direction")
+
+        G = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+
+        x0, x1 = self.encoder.limits[d]
+
+        G.umps.alpha = self.umps.alpha / (x1 - x0)
+        G.umps.A     = 2 * self.umps.A
+        G.umps.omega = 2 * np.dot(self.umps.A[:,1,:] - self.umps.A[:,0,:], self.umps.omega)
+
+        # TODO: extend to multi-dimensional case
+
+        return G
