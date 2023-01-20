@@ -39,7 +39,11 @@ class FunctionUMps():
 
 
     def scalar(self, other : FunctionUMps) -> float:
-        """Scalar product between the underlying uMPSs
+        """Compute the integral
+
+        ∫ `self(x) * other(x)` dx
+
+        over the whole domain
 
         Paramaters
         ----------
@@ -70,7 +74,11 @@ class FunctionUMps():
 
 
     def integral(self) -> float:
-        """Integral over whole domain
+        """Compute the integral
+
+        ∫ `self(x)**2` dx
+
+        over the whole domain
 
         """
         if len(self.encoder.limits) != 1:
