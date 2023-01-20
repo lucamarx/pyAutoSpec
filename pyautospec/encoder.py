@@ -66,6 +66,19 @@ class VectorEncoder():
         return f"{self.dim}-dimensional encoder"
 
 
+    def one_hot(self, X : List[List[int]]) -> np.ndarray:
+        """Perform one-hot encoding
+
+        Parameters
+        ----------
+
+        X : np.ndarray
+
+        """
+        idxs = np.array(X).reshape(-1)
+        return np.eye(self.part_d)[idxs].reshape((-1, self.encoding_length, self.part_d))
+
+
     def encode(self, *args) -> List[int]:
         """Encode a vector into an l-word
 
