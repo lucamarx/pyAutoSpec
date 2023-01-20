@@ -44,7 +44,6 @@ class DatasetUMps():
         return self.umps(self.encoder.encode(*args))
 
 
-
     def _c_basis(self, X : np.ndarray, Xs : np.ndarray) -> Tuple[Dict, Dict]:
         """Take prefixes/suffixes from a list of words
 
@@ -65,6 +64,15 @@ class DatasetUMps():
         prefixes, suffixes = {}, {}
         last_prefix, last_suffix = 0, 0
         for x in X:
+            t = tuple(x)
+            if prefixes.get(t) is None:
+                prefixes[t] = last_prefix
+                last_prefix += 1
+
+            if suffixes.get(t) is None:
+                suffixes[t] = last_suffix
+                last_suffix += 1
+
             for i in range(len(x)):
                 p, q = tuple(x[:i]), tuple(x[i:])
 
@@ -190,3 +198,5 @@ class DatasetUMps():
 
         # perform spectral learning from model
         self.umps._spectral_learning(hp, hs, H, Hs, n_states)
+
+        return hp, hs, H, Hs
