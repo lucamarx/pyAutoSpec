@@ -41,7 +41,9 @@ class FunctionUMps():
     def scalar(self, other : FunctionUMps) -> float:
         """Compute the integral
 
-        ∫ `self(x) * other(x)` dx
+        ⌠
+        ⎮ `self(x)·other(x)` dx
+        ⌡
 
         over the whole domain
 
@@ -50,6 +52,11 @@ class FunctionUMps():
 
         other : FunctionUMps
         Another function defined on the same domain
+
+        Returns
+        -------
+
+        The value of the integral
 
         """
         if self.encoder.limits != other.encoder.limits:
@@ -76,9 +83,16 @@ class FunctionUMps():
     def integral(self) -> float:
         """Compute the integral
 
-        ∫ `self(x)**2` dx
+        ⌠
+        ⎮ `self(x)` dx
+        ⌡
 
         over the whole domain
+
+        Returns
+        -------
+
+        The value of the integral
 
         """
         if len(self.encoder.limits) != 1:
