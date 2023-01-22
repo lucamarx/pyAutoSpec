@@ -75,9 +75,22 @@ class FunctionUMps():
     def fit(self, f : Callable[[Tuple], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a function
 
+        Parameters
+        ----------
+
+        f : Callable[[Tuple], float]
+        The function to learn
+
+        learn_resolution : int
+        The maximum length of words included in the basis used to estimate
+        Hankel blocks
+
+        n_states : int, optional
+        Truncate the uMps to the specified number of states
+
         """
-        self.f = f
         self.umps.fit(lambda x: f(*self.encoder.decode(x)), learn_resolution, n_states)
+        self.f = f
 
 
     def integral(self) -> float:
