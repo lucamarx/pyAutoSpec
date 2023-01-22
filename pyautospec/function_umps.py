@@ -72,6 +72,25 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
+    def eval_super(self, args : List[Tuple[float, Tuple[float]]]) -> float:
+        """Evaluate function over linear superposition of arguments
+
+        Parameters
+        ----------
+
+        args : List[Tuple[float, Tuple[float]]]
+        A list `[(a, (u1,u2,...)), (b, (v1,v2,...)), ...]` of
+        weighted arguments
+
+        Returns
+        -------
+
+        The value of the uMps over the linear combination of encoded arguments
+
+        """
+        return self.umps(np.sum([a * self.encoder.one_hot(self.encoder.encode(*x))[0] for a, x in args], axis=0))
+
+
     def fit(self, f : Callable[[Tuple], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a function
 
