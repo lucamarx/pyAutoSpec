@@ -72,6 +72,27 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
+    def __mul__(self, c : float) -> FunctionUMps:
+        """Product with a scalar
+
+        """
+        C = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+
+        C.umps = c * self.umps
+
+        if self.f is not None:
+            C.f = lambda *args: c * self.f(args)
+
+        return C
+
+
+    def __rmul__(self, c : float) -> FunctionUMps:
+        """Product with a scalar
+
+        """
+        return self.__mul__(c)
+
+
     def __add__(self, other : FunctionUMps) -> FunctionUMps:
         """Combine two functions by taking their uMps tensor sum
 

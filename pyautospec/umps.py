@@ -276,6 +276,41 @@ class UMPS():
         raise Exception("invalid type")
 
 
+    def __mul__(self, c : float) -> UMPS:
+        """Product with a scalar
+
+        Parameters
+        ----------
+
+        c : float
+        A constant
+
+        Returns
+        -------
+
+        `c · self`
+
+        """
+        C = UMPS(self.part_d, self.bond_d)
+
+        C.alpha = c * self.alpha
+
+        C.A = self.A
+
+        C.omega = self.omega
+
+        C.singular_values = self.singular_values
+
+        return C
+
+
+    def __rmul__(self, c : float) -> UMPS:
+        """Product with a scalar
+
+        """
+        return self.__mul__(c)
+
+
     def __add__(self, other : UMPS) -> UMPS:
         """Tensor sum of two uMps
 
