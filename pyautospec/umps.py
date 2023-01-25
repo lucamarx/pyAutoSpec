@@ -47,6 +47,29 @@ def pseudo_inverse(M : np.ndarray) -> np.ndarray:
     return np.dot(np.dot(np.transpose(Vt), Sinv), np.transpose(U))
 
 
+def tensor_sum(A : np.ndarray, B : np.ndarray) -> np.ndarray:
+    """Tensor sum
+
+    `         ╭───────┬───┐
+    `         │       │   │
+    `         │   A   │ 0 │
+    ` A ⊕ B = │       │   │
+    `         ├───────┼───┤
+    `         │   0   │ B │
+    `         └───────┴───┘
+
+    """
+    if len(A.shape) != len(B.shape):
+        raise Exception("must have the same rank")
+
+    S = np.zeros(tuple(a+b for a,b in zip(A.shape, B.shape)))
+
+    S[tuple(slice(0,a) for a in A.shape)] = A
+    S[tuple(slice(a,a+b) for a,b in zip(A.shape, B.shape))] = B
+
+    return S
+
+
 class UMPS():
     """Uniform Matrix Product State (α, A, ω)
 
@@ -251,6 +274,41 @@ class UMPS():
             return self.evaluate_word(x)
 
         raise Exception("invalid type")
+
+
+    def __add__(self, other : UMPS) -> UMPS:
+        """Tensor sum of two uMps
+
+        Parameters
+        ----------
+
+        other : UMPS
+        Another uMps
+
+        Returns
+        -------
+
+        `self ⊕ other`
+
+        The tensor sum of the two uMps
+
+        """
+        if self.part_d != other.part_d:
+            raise Exception("the two uMps must have the same particle dimension")
+
+        S = UMPS(self.part_d, self.bond_d + other.bond_d)
+
+        S.alpha = tensor_sum(self.alpha, other.alpha)
+
+        for p in range(self.part_d):
+            S.A[:,p,:] = tensor_sum(self.A[:,p,:], other.A[:,p,:])
+
+        S.omega = tensor_sum(self.omega, other.omega)
+
+        if self.singular_values is not None and other.singular_values is not None:
+            S.singular_values = np.hstack((self.singular_values, other.singular_values))
+
+        return S
 
 
     def scalar(self, other : UMPS, length : int) -> float:
