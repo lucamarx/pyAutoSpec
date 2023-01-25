@@ -72,7 +72,24 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
-    def eval_super(self, args : List[Tuple[float, Tuple[float]]]) -> float:
+    def __add__(self, other : FunctionUMps) -> FunctionUMps:
+        """Combine two functions by taking their uMps tensor sum
+
+        """
+        if self.encoder != other.encoder:
+            raise Exception("must have the same domain/encoding")
+
+        S = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+
+        S.umps = self.umps + other.umps
+
+        if self.f is not None and other.f is not None:
+            S.f = lambda *args: self.f(args) + other.f(args)
+
+        return S
+
+
+    def eval_super(self, args : List[Tuple[float, Tuple]]) -> float:
         """Evaluate function over linear superposition of arguments
 
         Parameters
