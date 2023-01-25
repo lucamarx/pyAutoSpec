@@ -1,6 +1,8 @@
 """
 Multi-dimensional vector-word encoder
 """
+from __future__ import annotations
+
 import numpy as np
 
 from typing import List, Tuple, Optional
@@ -60,6 +62,16 @@ class VectorEncoder():
         self.limits = limits
         self.part_d = 2**self.dim
         self.encoding_length = encoding_length
+
+
+    def __eq__(self, other : VectorEncoder) -> bool:
+        if self.dim != other.dim:
+            return False
+
+        if self.encoding_length != other.encoding_length:
+            return False
+
+        return all([l1 == l2 for l1,l2 in zip(self.limits, other.limits)])
 
 
     def __repr__(self):
