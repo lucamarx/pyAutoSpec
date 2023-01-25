@@ -94,6 +94,9 @@ class UMPS():
 
 
     def __repr__(self) -> str:
+
+        S = f"{self.entropy():.2f} (bits)" if self.singular_values is not None else "-"
+
         return f"""
   ╭───┐     ╭───┐     ╭───┐
   │ α ├─...─┤ A ├─...─┤ ω │
@@ -101,6 +104,7 @@ class UMPS():
 
   particle dim: {self.part_d:3d}
       bond dim: {self.bond_d:3d}
+       entropy: {S}
         """
 
 
@@ -503,3 +507,21 @@ class UMPS():
             I = np.einsum("i,ij->j", I, T)
 
         return np.dot(I, self.omega), I
+
+
+    def entropy(self) -> float:
+        """Compute entanglement entropy from singular values
+
+        Returns
+        -------
+
+            2       2
+        -∑ s_i log(s_i)
+
+        """
+        if self.singular_values is None:
+            raise Exception("no singular values")
+
+        s = np.square(self.singular_values)
+        s = s / np.sum(s)
+        return -np.sum(s * np.log2(s))
