@@ -7,7 +7,7 @@ import graphviz
 import itertools
 import numpy as np
 
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable, Union
 from tqdm.auto import tqdm
 
 
@@ -276,39 +276,61 @@ class UMPS():
         raise Exception("invalid type")
 
 
-    def __mul__(self, c : float) -> UMPS:
-        """Product with a scalar
+    def __mul__(self, other : Union[int, float, UMPS]) -> UMPS:
+        """Product with a scalar or another uMps
 
         Parameters
         ----------
 
-        c : float
-        A constant
+        c : Union[int, float, UMPS]
+        A constant or another uMps
 
         Returns
         -------
 
-        `c · self`
+        The product with the constant or the tensor product
 
         """
-        C = UMPS(self.part_d, self.bond_d)
+        if isinstance(other, int) or isinstance(other, float):
 
-        C.alpha = c * self.alpha
+            P = UMPS(self.part_d, self.bond_d)
 
-        C.A = self.A
+            P.alpha = other * self.alpha
 
-        C.omega = self.omega
+            P.A = self.A
 
-        C.singular_values = self.singular_values
+            P.omega = self.omega
 
-        return C
+            P.singular_values = self.singular_values
+
+            return P
+
+        if isinstance(other, UMPS):
+            if self.part_d != other.part_d:
+                raise Exception("the two uMps must have the same particle dimension")
+
+            P = UMPS(self.part_d, self.bond_d * other.bond_d)
+
+            P.alpha = np.einsum("i,j->ij", self.alpha, other.alpha).reshape(P.bond_d)
+
+            for p in range(self.part_d):
+                P.A[:,p,:] = np.einsum("ij,kl->ikjl", self.A[:,p,:], other.A[:,p,:]).reshape(P.bond_d, P.bond_d)
+
+            P.omega = np.einsum("i,j->ij", self.omega, other.omega).reshape(P.bond_d)
+
+            # TODO: what are the singular values of the product?
+            P.singular_values = None
+
+            return P
+
+        raise Exception(f"invalid type for uMps product: {other.__class__.__name__}")
 
 
-    def __rmul__(self, c : float) -> UMPS:
-        """Product with a scalar
+    def __rmul__(self, other : Union[int, float, UMPS]) -> UMPS:
+        """Product with a scalar or another uMps
 
         """
-        return self.__mul__(c)
+        return self.__mul__(other)
 
 
     def __add__(self, other : UMPS) -> UMPS:
@@ -370,7 +392,7 @@ class UMPS():
             raise Exception("length must be at least 1")
 
         if self.part_d != other.part_d:
-            raise Exception("the two uMPSs must have the same particle dimension")
+            raise Exception("the two uMps must have the same particle dimension")
 
         T = np.einsum("ipk,jpl->ijkl", self.A, other.A)
         S = np.einsum("i,j->ij", self.alpha, other.alpha)

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable, Union
 
 from .umps import UMPS
 from .encoder import VectorEncoder
@@ -72,25 +72,42 @@ class FunctionUMps():
         return self.umps(self.encoder.encode(*args))
 
 
-    def __mul__(self, c : float) -> FunctionUMps:
-        """Product with a scalar
+    def __mul__(self, other : Union[int, float, FunctionUMps]) -> FunctionUMps:
+        """Product with a scalar or another function
 
         """
-        C = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+        if isinstance(other, int) or isinstance(other, float):
 
-        C.umps = c * self.umps
+            P = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
 
-        if self.f is not None:
-            C.f = lambda *args: c * self.f(args)
+            P.umps = other * self.umps
 
-        return C
+            if self.f is not None:
+                P.f = lambda *args: other * self.f(*args)
+
+            return P
+
+        if isinstance(other, FunctionUMps):
+            if self.encoder != other.encoder:
+                raise Exception("must have the same domain/encoding")
+
+            P = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+
+            P.umps = other.umps * self.umps
+
+            if self.f is not None and other.f is not None:
+                P.f = lambda *args: other.f(*args) * self.f(*args)
+
+            return P
+
+        raise Exception(f"invalid type for function uMps product: {other.__class__.__name__}")
 
 
-    def __rmul__(self, c : float) -> FunctionUMps:
-        """Product with a scalar
+    def __rmul__(self, other : Union[int, float, FunctionUMps]) -> FunctionUMps:
+        """Product with a scalar or another function
 
         """
-        return self.__mul__(c)
+        return self.__mul__(other)
 
 
     def __add__(self, other : FunctionUMps) -> FunctionUMps:
