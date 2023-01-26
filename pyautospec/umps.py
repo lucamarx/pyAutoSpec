@@ -368,6 +368,28 @@ class UMPS():
         return S
 
 
+    def __or__(self, other : UMPS) -> UMPS:
+        """Concatenation of two uMps
+
+        """
+        if self.part_d != other.part_d:
+            raise Exception("the two uMps must have the same particle dimension")
+
+        if self.bond_d != other.bond_d:
+            raise Exception("the two uMps must have the same bond dimension")
+
+        C = UMPS(self.part_d, self.bond_d)
+
+        C.alpha = self.alpha
+
+        for p in range(self.part_d):
+            C.A[:,p,:] = np.einsum("ij,jk->ik", self.A[:,p,:], other.A[:,p,:])
+
+        C.omega = other.omega
+
+        return C
+
+
     def scalar(self, other : UMPS, length : int) -> float:
         """Compute scalar product between two uMPSs
 

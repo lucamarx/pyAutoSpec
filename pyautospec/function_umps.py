@@ -127,6 +127,20 @@ class FunctionUMps():
         return S
 
 
+    def __or__(self, other : FunctionUMps) -> FunctionUMps:
+        """Combine two functions by taking the concatenation of their uMps
+
+        """
+        if self.encoder != other.encoder:
+            raise Exception("must have the same domain/encoding")
+
+        C = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+
+        C.umps = self.umps | other.umps
+
+        return C
+
+
     def eval_super(self, args : List[Tuple[float, Tuple]]) -> float:
         """Evaluate function over linear superposition of arguments
 
