@@ -141,6 +141,34 @@ class FunctionUMps():
         return C
 
 
+    def __matmul__(self, other : FunctionUMps) -> FunctionUMps:
+        """Tensor product over the particle dimension
+
+        """
+        if self.encoder != other.encoder:
+            raise Exception("must have the same domain/encoding")
+
+        P = FunctionUMps(self.encoder.limits + other.encoder.limits, self.encoder.encoding_length)
+
+        P.umps = self.umps @ other.umps
+
+        return P
+
+
+    def __mod__(self, other : FunctionUMps) -> FunctionUMps:
+        """Tensor sum over the particle dimension of two uMps
+
+        """
+        if self.encoder != other.encoder:
+            raise Exception("must have the same domain/encoding")
+
+        S = FunctionUMps(self.encoder.limits + other.encoder.limits, self.encoder.encoding_length)
+
+        S.umps = self.umps % other.umps
+
+        return S
+
+
     def eval_super(self, args : List[Tuple[float, Tuple]]) -> float:
         """Evaluate function over linear superposition of arguments
 

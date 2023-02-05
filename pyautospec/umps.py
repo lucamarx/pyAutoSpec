@@ -390,6 +390,46 @@ class UMPS():
         return C
 
 
+    def __matmul__(self, other : UMPS) -> UMPS:
+        """Tensor product over the particle dimension of two uMps
+
+        """
+        if self.bond_d != other.bond_d:
+            raise Exception("the two uMps must have the same bond dimension")
+
+        P = UMPS(self.part_d * other.part_d, self.bond_d)
+
+        P.alpha = (self.alpha + other.alpha)/2
+
+        for i in range(self.bond_d):
+            for j in range(self.bond_d):
+                P.A[i,:,j] = np.einsum("p,q->pq", self.A[i,:,j], other.A[i,:,j]).reshape(self.part_d * other.part_d)
+
+        P.omega = (self.omega + other.omega)/2
+
+        return P
+
+
+    def __mod__(self, other : UMPS) -> UMPS:
+        """Tensor sum over the particle dimension of two uMps
+
+        """
+        if self.bond_d != other.bond_d:
+            raise Exception("the two uMps must have the same bond dimension")
+
+        S = UMPS(self.part_d * other.part_d, self.bond_d)
+
+        S.alpha = (self.alpha + other.alpha)/2
+
+        for i in range(self.bond_d):
+            for j in range(self.bond_d):
+                S.A[i,:,j] = tensor_sum(self.A[i,:,j], other.A[i,:,j])
+
+        S.omega = (self.omega + other.omega)/2
+
+        return S
+
+
     def scalar(self, other : UMPS, length : int) -> float:
         """Compute scalar product between two uMPSs
 
