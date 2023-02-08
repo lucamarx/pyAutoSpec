@@ -13,12 +13,13 @@ from .datasets import load_mnist
 from .function_wfa import FunctionWfa
 from .function_mps import FunctionMps
 from .function_umps import FunctionUMps
+from .gen_fun_umps import GenFunctionUMps
 from .dataset_mps import DatasetMps
 from .dataset_umps import DatasetUMps
 from .image_wfa import ImageWfa
 
 __all__ = ["Wfa", "Mps", "Mps2", "UMPS", "parallel_plot", "load_mnist",
            "SpectralLearning", "FunctionWfa", "FunctionMps", "FunctionUMps",
-           "DatasetMps", "DatasetUMps", "ImageWfa"]
+           "GenFunctionUMps", "DatasetMps", "DatasetUMps", "ImageWfa"]
 
-__version__ = "0.9.2"
+__version__ = "0.9.3"
