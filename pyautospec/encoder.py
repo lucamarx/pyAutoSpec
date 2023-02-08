@@ -196,3 +196,54 @@ class VectorEncoder():
             raise Exception(f"invalid shape: v-vectors must be {self.encoding_length} long")
 
         return np.array([self.decode(w) for w in W])
+
+
+class IntegerEncoder:
+    """Integer encoder"""
+
+
+    def __repr__(self):
+        return "int encoder"
+
+
+    def encode(self, n : int, length : Optional[int] = 64) -> List[int]:
+        """Encode an integer into an l-word
+
+        Parameters
+        ----------
+
+        n : int
+        The integer
+
+        length : int, optional
+        The length of the encoded l-word
+
+        Returns
+        -------
+
+        The encoded l-word
+
+        """
+        w = []
+        for _ in range(length):
+            w += [n % 2]
+            n = n // 2
+        return w
+
+
+    def decode(self, word : List[int]) -> int:
+        """Decode a l-word into an integer
+
+        Parameters
+        ----------
+
+        word : List[int]
+        The l-word to be decoded
+
+        Returns
+        -------
+
+        The decoded integer
+
+        """
+        return sum([word[i] * 2**i for i in range(len(word))])
