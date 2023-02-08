@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
+from math import floor, log2
 from typing import List, Tuple, Optional
 
 
@@ -206,7 +207,7 @@ class IntegerEncoder:
         return "int encoder"
 
 
-    def encode(self, n : int, length : Optional[int] = 64) -> List[int]:
+    def encode(self, n : int, length : Optional[int] = None) -> List[int]:
         """Encode an integer into an l-word
 
         Parameters
@@ -224,6 +225,9 @@ class IntegerEncoder:
         The encoded l-word
 
         """
+        if length is None:
+            length = int(floor(log2(n)))+1 if n>0 else 1
+
         w = []
         for _ in range(length):
             w += [n % 2]
