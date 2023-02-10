@@ -12,7 +12,7 @@ class GenFunctionUMps:
 
     """
 
-    def __init__(self, max_bond_dim : Optional[int] = 20):
+    def __init__(self, max_bond_dim : Optional[int] = 20, base : Optional[int] = 2):
         """Create an ordinary generating function
 
         Parameters
@@ -22,8 +22,8 @@ class GenFunctionUMps:
         The maximum number of states
 
         """
-        self.encoder = IntegerEncoder()
-        self.umps = UMPS(2, max_bond_dim)
+        self.encoder = IntegerEncoder(base)
+        self.umps = UMPS(base, max_bond_dim)
         self.f = None
 
 

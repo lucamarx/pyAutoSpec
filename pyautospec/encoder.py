@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from math import floor, log2
+from math import floor, log, log2
 from typing import List, Tuple, Optional
 
 
@@ -202,9 +202,21 @@ class VectorEncoder():
 class IntegerEncoder:
     """Integer encoder"""
 
+    def __init__(self, base : Optional[int] = 2):
+        """Make an encoder
+
+        Parameters
+        ----------
+
+        base : int, optional
+        The base of the encoding
+
+        """
+        self.base = base
+
 
     def __repr__(self):
-        return "int encoder"
+        return f"Base {self.base} integer encoder"
 
 
     def encode(self, n : int, length : Optional[int] = None) -> List[int]:
@@ -226,12 +238,12 @@ class IntegerEncoder:
 
         """
         if length is None:
-            length = int(floor(log2(n)))+1 if n>0 else 1
+            length = int(floor(log(n, self.base)))+1 if n>0 else 1
 
         w = []
         for _ in range(length):
-            w += [n % 2]
-            n = n // 2
+            w += [n % self.base]
+            n = n // self.base
         return w
 
 
@@ -250,4 +262,4 @@ class IntegerEncoder:
         The decoded integer
 
         """
-        return sum([word[i] * 2**i for i in range(len(word))])
+        return sum([word[i] * self.base**i for i in range(len(word))])
