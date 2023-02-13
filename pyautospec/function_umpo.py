@@ -3,7 +3,7 @@ UMpo based multi-dimensional relations
 """
 from __future__ import annotations
 
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Union
 
 from .umpo import UMPO
 from .encoder import VectorEncoder
@@ -37,22 +37,26 @@ class FunctionUMpo():
 
     def __repr__(self):
         return f"""
-  {" x ".join([f"[{x0:.2f},{x1:.2f})" for (x0, x1) in self.encoder.limits*2])}
+  {" x ".join([f"[{x0:.2f},{x1:.2f})" for (x0, x1) in self.encoder.limits*2])} → R
   {self.umpo.__repr__()}
         """
 
 
-    def __call__(self, other : FunctionUMps) -> FunctionUMps:
-        """Evaluate over another function
+    def __call__(self, other : Union[FunctionUMps, Tuple[float,float]]) -> FunctionUMps:
+        """Evaluate operator over another uMps or on a pair of values
 
         """
-        if self.encoder != other.encoder:
-            raise Exception("must be defined on the same domain")
+        if isinstance(other, FunctionUMps):
+            if self.encoder != other.encoder:
+                raise Exception("must be defined on the same domain")
 
-        V = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
-        V.umps = self.umpo(other.umps)
+            V = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
+            V.umps = self.umpo(other.umps)
 
-        return V
+            return V
+
+        if isinstance(other, tuple):
+            return self.umpo((self.encoder.encode(other[0]), self.encoder.encode(other[1])))
 
 
     def fit(self, r : Callable[[float, float], float], learn_resolution : int, n_states : Optional[int] = None):

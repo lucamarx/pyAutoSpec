@@ -94,7 +94,7 @@ class UMPO():
         return P
 
 
-    def __call__(self, x : Union[UMPS, List[int]]) -> Union[UMPS, float]:
+    def __call__(self, x : Union[UMPS, Tuple[List[int],List[int]]]) -> Union[UMPS, float]:
         """Evaluate uMpo
 
         """
