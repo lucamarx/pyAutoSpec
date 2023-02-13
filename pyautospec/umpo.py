@@ -126,7 +126,7 @@ class UMPO():
         return ([self.alpha2io[x][0] for x in w], [self.alpha2io[x][1] for x in w])
 
 
-    def fit(self, r : Callable[[Tuple[List[int], List[int]]], float], learn_resolution : int, n_states : Optional[int] = None):
+    def fit(self, r : Callable[[List[int], List[int]], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a weighted relation
 
         r: Σ* x Σ* → R

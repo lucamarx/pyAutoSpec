@@ -49,13 +49,13 @@ class FunctionUMpo():
         if self.encoder != other.encoder:
             raise Exception("must be defined on the same domain")
 
-        V = FunctionUMps([self.encoder.limits], self.encoder.encoding_length)
+        V = FunctionUMps(self.encoder.limits, self.encoder.encoding_length)
         V.umps = self.umpo(other.umps)
 
         return V
 
 
-    def fit(self, r : Callable[[Tuple[float, float]], float], learn_resolution : int, n_states : Optional[int] = None):
+    def fit(self, r : Callable[[float, float], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a weighted relation
 
         Parameters
@@ -72,5 +72,5 @@ class FunctionUMpo():
         Truncate the uMps to the specified number of states
 
         """
-        self.umpo.fit(lambda x: r(self.encoder.decode(x[0]), self.encoder.decode(x[1])), learn_resolution, n_states)
+        self.umpo.fit(lambda x,y: r(self.encoder.decode(x)[0], self.encoder.decode(y)[0]), learn_resolution, n_states)
         self.r = r

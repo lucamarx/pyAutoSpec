@@ -25,6 +25,9 @@ class FunctionUMps():
         limits : List[Tuple[float,float]]
         The limits of each vector dimension
 
+        encoding_length : int, optional
+        Default encoding length
+
         max_bond_dim : int, optional
         The maximum number of states
 
