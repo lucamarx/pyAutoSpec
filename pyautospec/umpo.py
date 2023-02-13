@@ -78,9 +78,12 @@ class UMPO():
         Returns
         -------
 
-        The uMps resuting by the contraction
+        The uMps resulting by the contraction
 
         """
+        if other.part_d != self.inp_part_d:
+            raise Exception("uMps part_d must match uMpo input part_d")
+
         A_io = self.umps.A[:,self.io2alpha,:]
 
         P = UMPS(self.out_part_d, self.umps.bond_d * other.bond_d)
@@ -109,13 +112,13 @@ class UMPO():
         input/output alphabets
 
         """
-        return ([self.alpha2io[x][0] for x in w], [self.alphabet[x][1] for x in w])
+        return ([self.alpha2io[x][0] for x in w], [self.alpha2io[x][1] for x in w])
 
 
     def fit(self, r : Callable[[Tuple[List[int], List[int]]], float], learn_resolution : int, n_states : Optional[int] = None):
         """Learn a weighted relation
 
-        f: Σ* x Σ* → R
+        r: Σ* x Σ* → R
 
         Parameters
         ----------
@@ -131,4 +134,4 @@ class UMPO():
         The maximum number of states in the uMpo
 
         """
-        self.umps.fit(lambda x: r(self._io_decode(x)), learn_resolution, n_states)
+        self.umps.fit(lambda x: r(*self._io_decode(x)), learn_resolution, n_states)
