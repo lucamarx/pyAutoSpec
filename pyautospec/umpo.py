@@ -101,10 +101,21 @@ class UMPO():
         if isinstance(x, UMPS):
             return self.evaluate_umps(x)
 
-        if isinstance(x, list):
-            return self.umps(x)
+        if isinstance(x, tuple):
+            return self.umps(self._io_encode(*x))
 
         raise Exception("invalid type")
+
+
+    def _io_encode(self, winp : List[int], wout : List[int]) -> List[int]:
+        """Encode two words in the input/output alphabets into a word in the
+        combined alphabet
+
+        """
+        if len(winp) != len(wout):
+            raise Exception("must have the same length")
+
+        return [self.io2alpha[t] for t in zip(winp, wout)]
 
 
     def _io_decode(self, w : List[int]) -> Tuple[List[int], List[int]]:
