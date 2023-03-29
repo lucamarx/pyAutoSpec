@@ -1,6 +1,38 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "lucamarx-pyautospec"
+readme = "README.md"
+version = "0.10.0"
+authors = [{name="Luca Marx", email="luca@lucamarx.com"}]
+license = {file="LICENSE"}
+keywords = ["automata", "spectral-learning"]
+description = "Spectral learning for weighted automata"
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "scikit-learn >= 1.0.2",
+    "matplotlib   >= 3.3.4",
+    "graphviz     >= 0.19.0",
+    "seaborn      >= 0.11.2",
+    "pandas       >= 1.4.2",
+    "tqdm         >= 4.62.0",
+    "jaxlib       >= 0.3.0",
+    "jax          >= 0.3.0"
+]
+requires-python = ">=3.9"
+
+[project.urls]
+"Homepage" = "https://github.com/lucamarx/pyAutoSpec"
+"Bug Tracker" = "https://github.com/lucamarx/pyAutoSpec/issues"
+
+[project.optional-dependencies]
+dev = ["pip-tools", "pytest"]
 
 [tool.pyright]
 typeCheckingMode = "off"
